@@ -29,6 +29,7 @@ int B; // capacidad máxima de un nodo
 typedef struct entry entry;
 typedef struct nodo nodo;
 
+// para probar que funcionen los commits xd
 typedef struct { // una entrada de un nodo
     pair<double, double> p;
     double cr;
