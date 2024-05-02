@@ -220,6 +220,8 @@ Nodo *crear_MTree_CCP(const set<pair<double,double>> points){
 
         //5. Si |F| = 1, volver al paso 2.
 
+        int h = numeric_limits<int>::max(); //la altura mínima de los árboles Tj.
+
         // 6. Se realiza recursivamente el algoritmo CP en cada Fj, obteniendo el árbol Tj
         // si llegamos a esta parte, samples tiene más de un conjunto c:
         //nodo raiz; // el nodo al que asociaremos hijos y cosas
@@ -231,6 +233,9 @@ Nodo *crear_MTree_CCP(const set<pair<double,double>> points){
             vector<Entry> entradas = sub_arbol->entries;
             if(entradas.size() >= b_min){
                 subarboles[par.first] = sub_arbol;
+                if(sub_arbol->altura < h){
+                    h = sub_arbol->altura;
+                }
                 //raiz.insertarEntry({par.first, 0.0, &sub_arbol});
             }
             else{
@@ -242,6 +247,9 @@ Nodo *crear_MTree_CCP(const set<pair<double,double>> points){
                 for(auto entrada = entradas.begin(); entrada != entradas.end(); entrada++){
                     Nodo *sub_subarbol = entrada->a;
                     subarboles[entrada->p] = sub_subarbol;
+                    if(sub_subarbol->altura < h){
+                        h = sub_arbol->altura;
+                    }
                     //samples[entrada.p] = se;
                     //raiz.insertarEntry({entrada.p, 0.0, &sub_subarbol});
                 }
@@ -251,8 +259,7 @@ Nodo *crear_MTree_CCP(const set<pair<double,double>> points){
         // 8. Etapa de balanceamiento: Se define h como la altura mínima de los árboles Tj.
         // Se define T"'" inicialmente como un conjunto vacío.
 
-        int h; //la altura mínima de los árboles Tj. IDEA: Cada nodo tiene su altura como propiedad??
-        set<Nodo*> T2;
+        set<Nodo*> T2 = set<Nodo*>();
 
         // 9. Por cada Tj , si su altura es igual a h, se añade a T"′". Si no se cumple:
         // ** esto podría ser una fn recursiva, tal que la pueda llamar de nuevo!!
