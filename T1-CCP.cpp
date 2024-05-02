@@ -26,17 +26,16 @@
 using namespace std;
 
 int B; // capacidad máxima de un nodo
-typedef struct entry entry;
-typedef struct nodo nodo;
+struct Nodo;
 
 // para probar que funcionen los commits xd
-typedef struct { // una entrada de un nodo
+typedef struct Entry { // una entrada de un nodo
     pair<double, double> p;
     double cr;
-    nodo *a;
-} entry;
+    Nodo *a;
+} Entry;
 
-size_t tamaño_max = B * sizeof(entry); // capacidad: B entradas en disco
+size_t tamaño_max = B * sizeof(Entry); // capacidad: B entradas en disco
 int b_min = 0.5 * B; // capacidad mínima
 int b_max = B; // capacidad máxima
 
@@ -44,8 +43,9 @@ int b_max = B; // capacidad máxima
 unsigned seed = chrono::system_clock::now().time_since_epoch().count();
 default_random_engine e(seed);
 
-typedef struct {
-    vector<entry> entries;
+typedef struct Nodo {
+    vector<Entry> entries;
+    int altura;
     int b_min = 0.5 * B; // capacidad mínima
     int b_max = B; // capacidad máxima
 
@@ -57,12 +57,10 @@ typedef struct {
     o se accedió a un caso donde el nodo ya ha sido inicializado correctamente (tiene más o exactamente B/2 nodos)
     2. eliminar una entrada del vector de entradas:
     - no necesita revisar la capacidad máxima, pero SÍ la mínima!
-    3. bool: esValido
-    - revisa si el nodo cumple con las condiciones de capacidad mínima y máxima
     */
     
     // insertar nueva entrada en entries
-    void insertarEntry(const entry entrada) {
+    void insertarEntry(const Entry entrada) {
         if (entries.size() < b_max) { // si todavía no se alcanza la capacidad máxima, todo bien
             entries.push_back(entrada);
         } else {
@@ -78,16 +76,7 @@ typedef struct {
             cerr << "Capacidad mínima excedida" << endl;
         }
     }
-
-    bool esValido(){
-        if (b_min < entries.size() && entries.size() < b_max){
-            return true;
-        }
-        else{
-            return false;
-        }
-    }
-} nodo;
+} Nodo;
 
 double distancia_cuadrado(const pair<double,double> punto1, const pair<double,double> punto2){
     // diferencia de coordenadas
@@ -130,6 +119,22 @@ map<pair<double, double>, set<pair<double, double>>> punto_mas_cercano(set<pair<
     return mapa;
 }
 
+/** función que, dada una raíz de un árbol, encuentra los subárboles de altura h que estén en él 
+ * nota: dado que h es la altura mínima de los árboles, entonces nunca ocurrirá que no se encuentren
+*/
+set<Nodo*> busqueda_h(Nodo *nodo, const int h, set<Nodo*>& arboles) {
+    if(nodo->altura == h){
+        arboles.insert(nodo);
+    }
+    else if (nodo->altura > h) { // si su altura es menor a h, sabemos que no tiene hijos de altura h
+        for (const auto& hijo : nodo->entries) {
+            // cada entry apunta a un nodo
+            busqueda_h(hijo.a, h, arboles);
+        }
+    }
+    return arboles;
+}
+
 
 // Algoritmo CP:
 // Input: Un set de puntos P
@@ -143,19 +148,20 @@ map<pair<double, double>, set<pair<double, double>>> punto_mas_cercano(set<pair<
 // 5. Si |F| = 1, volver al paso 2.
 
 
-nodo crear_MTree_CCP(const set<pair<double,double>> points){
+Nodo *crear_MTree_CCP(const set<pair<double,double>> points){
     int n = points.size();
     if(n <= B){ // entran todos los puntos en un nodo
-        nodo T; // se crea un árbol T (un nodo raíz con vector entries vacío)
+        Nodo *T; // se crea un árbol T (un nodo raíz con vector entries vacío)
         // se insertan todos los puntos a T
-        for(pair<double,double> punto: points){
+        for (pair<double,double> punto: points){
             // crear entrada, inicialmente con radio cobertor y a nulos.
-            entry entrada;
+            Entry entrada;
             entrada.p = punto;
             entrada.cr = 0.0; // pues double
             entrada.a = nullptr; // pues puntero
-            T.insertarEntry(entrada);
+            (*T).insertarEntry(entrada);
         }
+        T->altura = 0;
         return T; // se retorna T
     }
     else{
@@ -217,12 +223,12 @@ nodo crear_MTree_CCP(const set<pair<double,double>> points){
         // 6. Se realiza recursivamente el algoritmo CP en cada Fj, obteniendo el árbol Tj
         // si llegamos a esta parte, samples tiene más de un conjunto c:
         //nodo raiz; // el nodo al que asociaremos hijos y cosas
-        map<pair<double,double>, nodo>  subarboles;
+        map<pair<double,double>, Nodo*>  subarboles;
         //nodo raiz;
         for(const auto& par : samples){
-            nodo sub_arbol = crear_MTree_CCP(par.second); // se llama recursivamente a crear_MTree_CCP con los conjuntos de cada uno
+            Nodo *sub_arbol = crear_MTree_CCP(par.second); // se llama recursivamente a crear_MTree_CCP con los conjuntos de cada uno
             // cada llamada devuelve un nodo (raíz de árbol). luego, tendremos varios árboles Tj.
-            vector<entry> entradas = sub_arbol.entries;
+            vector<Entry> entradas = sub_arbol->entries;
             if(entradas.size() >= b_min){
                 subarboles[par.first] = sub_arbol;
                 //raiz.insertarEntry({par.first, 0.0, &sub_arbol});
@@ -234,8 +240,8 @@ nodo crear_MTree_CCP(const set<pair<double,double>> points){
                 // luego, estos nodos los agregagremos al set de subarboles
                 // y finalmente, agregamos las entradas que tenía la raíz del subárbol a samples.
                 for(auto entrada = entradas.begin(); entrada != entradas.end(); entrada++){
-                    nodo sub_subarbol = *entrada->a;
-                    subarboles[entrada.p] = sub_subarbol;
+                    Nodo *sub_subarbol = entrada->a;
+                    subarboles[entrada->p] = sub_subarbol;
                     //samples[entrada.p] = se;
                     //raiz.insertarEntry({entrada.p, 0.0, &sub_subarbol});
                 }
@@ -246,14 +252,14 @@ nodo crear_MTree_CCP(const set<pair<double,double>> points){
         // Se define T"'" inicialmente como un conjunto vacío.
 
         int h; //la altura mínima de los árboles Tj. IDEA: Cada nodo tiene su altura como propiedad??
-        set<nodo> T2;
+        set<Nodo*> T2;
 
         // 9. Por cada Tj , si su altura es igual a h, se añade a T"′". Si no se cumple:
         // ** esto podría ser una fn recursiva, tal que la pueda llamar de nuevo!!
         for(const auto& par_T_j : subarboles){
             pair<double,double> clave = par_T_j.first;
-            nodo T_j = par_T_j.second;
-            if(T_j.altura== h){
+            Nodo *T_j = par_T_j.second;
+            if(T_j->altura== h){
                 T2.insert(T_j);
             }
             else{
@@ -262,12 +268,12 @@ nodo crear_MTree_CCP(const set<pair<double,double>> points){
 
                 // 9.2 Se hace una búsqueda exhaustiva en Tj de todos los subárboles T"′" 1, . . . , T"′" p de altura igual a h.
                 // Se insertan estos árboles a T"′"
-                set<nodo> subtrees_h = busqueda_h(T_j); // funcion que busca y retorna un set con los subárboles de altura h que tiene T_j
-                for (nodo subtree_h : subtrees_h) {
+                set<Nodo *> subtrees_h = busqueda_h(T_j, h, set<Nodo *>()); // funcion que busca y retorna un set con los subárboles de altura h que tiene T_j
+                for (Nodo *subtree_h : subtrees_h) {
                     T2.insert(subtree_h);
 
                     // 9.3 Se insertan los puntos raíz de T"′"1, . . . , T"′" p: p"′" f1, . . . , p"′" fp en F
-                    for (entry entrada_h : subtree_h.entries){
+                    for (Entry entrada_h : subtree_h->entries){
                         subarboles[entrada_h.p] = subtree_h;
                     }
                 }
@@ -280,14 +286,24 @@ nodo crear_MTree_CCP(const set<pair<double,double>> points){
         for (const auto& pair : subarboles) {
             keys.insert(pair.first);
         }
-        nodo Tsup = crear_MTree_CCP(keys);
+        Nodo *Tsup = crear_MTree_CCP(keys);
         
         // 11. Se une cada Tj ∈ T"′" a su hoja en Tsup correspondiente al punto pfj ∈ F, obteniendo un nuevo árbol T .
 
         // 12. Se setean los radios cobertores resultantes para cada entrada en este árbol.
 
         // 13. Se retorna T .
-        nodo T;
+        Nodo *T;
+        int altura_max = 0;
+        for(const auto& pair : subarboles){ // uno con los hijos
+            (*T).insertarEntry({pair.first, 0.0, pair.second});
+            int altura = pair.second->altura;
+            if(altura > altura_max){
+                altura_max = altura;
+            }
+        }
+        // setear altura de acuerdo a la altura mayor de sus nodos hijos
+        T->altura = altura_max;
         return T;
     }
 }
