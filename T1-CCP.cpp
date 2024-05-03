@@ -326,6 +326,9 @@ Nodo *crear_MTree_CCP(const set<pair<double,double>> points){
         }
         // setear altura de acuerdo a la altura mayor de sus nodos hijos
         Tsup->altura = altura_max + 1;
+        for(Entry entrada: Tsup->entries){
+            setear_radio_cobertor(entrada);
+        }
         return Tsup;
     }
 }
