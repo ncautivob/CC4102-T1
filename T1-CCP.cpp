@@ -275,7 +275,8 @@ Nodo *crear_MTree_CCP(const set<pair<double,double>> points){
 
                 // 9.2 Se hace una búsqueda exhaustiva en Tj de todos los subárboles T"′" 1, . . . , T"′" p de altura igual a h.
                 // Se insertan estos árboles a T"′"
-                set<Nodo *> subtrees_h = busqueda_h(T_j, h, set<Nodo *>()); // funcion que busca y retorna un set con los subárboles de altura h que tiene T_j
+                set<Nodo*> empty_set;
+                set<Nodo *> subtrees_h = busqueda_h(T_j, h, empty_set); // funcion que busca y retorna un set con los subárboles de altura h que tiene T_j
                 for (Nodo *subtree_h : subtrees_h) {
                     T2.insert(subtree_h);
 
