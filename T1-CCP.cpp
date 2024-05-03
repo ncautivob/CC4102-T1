@@ -93,7 +93,7 @@ double distancia_cuadrado(const pair<double,double> punto1, const pair<double,do
 /** la siguiente función encuentra el punto más cercano dentro de las claves de un mapa,
  * y luego se agrega al conjunto asociado a dicho punto
 */
-map<pair<double, double>, set<pair<double, double>>> punto_mas_cercano(set<pair<double, double>> points, map<pair<double, double>, set<pair<double, double>>> mapa){
+map<pair<double, double>, set<pair<double, double>>> punto_mas_cercano(const set<pair<double, double>> points, map<pair<double, double>, set<pair<double, double>>> mapa){
     for(pair<double,double> punto: points){
         // le asignamos su sample más cercano!
 
@@ -166,9 +166,8 @@ Nodo *crear_MTree_CCP(const set<pair<double,double>> points){
     }
     else{
         map<pair<double,double>, set<pair<double,double>>> samples;
+        int k = min(B, n/B);
         do{
-            int k = min(B, n/B);
-
             // IDEA: los primeros k después del shuffle son los seleccionados.
             
             vector<int> indices(n); // un vector de tamaño n
@@ -240,7 +239,7 @@ Nodo *crear_MTree_CCP(const set<pair<double,double>> points){
             }
             else{
                 // se quita la raiz, se elimina pfj de F y se trabaja con sus subárboles
-                samples.erase(par.first);
+                //samples.erase(par.first);
                 // para acceder a los subárboles, encontraremos los nodos a los que referencia cada entry
                 // luego, estos nodos los agregagremos al set de subarboles
                 // y finalmente, agregamos las entradas que tenía la raíz del subárbol a samples.
@@ -282,7 +281,7 @@ Nodo *crear_MTree_CCP(const set<pair<double,double>> points){
 
                     // 9.3 Se insertan los puntos raíz de T"′"1, . . . , T"′" p: p"′" f1, . . . , p"′" fp en F
                     for (Entry entrada_h : subtree_h->entries){
-                        subarboles[entrada_h.p] = subtree_h;
+                        subarboles[entrada_h.p] = entrada_h.a;
                     }
                 }
             }
