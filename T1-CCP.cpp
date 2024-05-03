@@ -135,6 +135,19 @@ set<Nodo*> busqueda_h(Nodo *nodo, const int h, set<Nodo*>& arboles) {
     return arboles;
 }
 
+int calcular_radio_cobertor(Entry entry){ // no seteará las hojas porque originalmente ya son 0.0
+
+    int max_radio = 0;
+    Nodo *hijo = entry.a;
+    for (Entry entrada : hijo->entries){
+        max_radio = max(max_radio, calcular_radio_cobertor(entrada) + (int)distancia_cuadrado(entry.p, entrada.p));
+    }
+
+    entry.cr = max_radio;
+
+    return max_radio;
+}
+
 
 // Algoritmo CP:
 // Input: Un set de puntos P
@@ -290,28 +303,30 @@ Nodo *crear_MTree_CCP(const set<pair<double,double>> points){
         set<pair<double,double>> keys; // las llaves de F (finalmente, F)
 
         // 10. Se define Tsup como el resultado de la llamada al algoritmo CP aplicado a F.
-        for (const auto& pair : subarboles) {
-            keys.insert(pair.first);
-        }
-        Nodo *Tsup = crear_MTree_CCP(keys);
+
+        //Nodo *Tsup = crear_MTree_CCP(keys);
         
-        // 11. Se une cada Tj ∈ T"′" a su hoja en Tsup correspondiente al punto pfj ∈ F, obteniendo un nuevo árbol T .
+        // 11. Se une cada Tj ∈ T"′" a su hoja en Tsup correspondiente al punto pfj ∈ F, obteniendo un nuevo árbol T.
+        //for(Nodo *T_j : T2) {
+            // unirlo a su hoja en Tsup!!
+            // cómo ...
+        //}
 
         // 12. Se setean los radios cobertores resultantes para cada entrada en este árbol.
 
         // 13. Se retorna T .
-        Nodo *T;
+        Nodo *Tsup;
         int altura_max = 0;
         for(const auto& pair : subarboles){ // uno con los hijos
-            (*T).insertarEntry({pair.first, 0.0, pair.second});
+            (*Tsup).insertarEntry({pair.first, 0.0, pair.second});
             int altura = pair.second->altura;
             if(altura > altura_max){
                 altura_max = altura;
             }
         }
         // setear altura de acuerdo a la altura mayor de sus nodos hijos
-        T->altura = altura_max;
-        return T;
+        Tsup->altura = altura_max + 1;
+        return Tsup;
     }
 }
 
