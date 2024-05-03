@@ -135,12 +135,12 @@ set<Nodo*> busqueda_h(Nodo *nodo, const int h, set<Nodo*>& arboles) {
     return arboles;
 }
 
-int calcular_radio_cobertor(Entry entry){ // no seteará las hojas porque originalmente ya son 0.0
+int setear_radio_cobertor(Entry& entry){ // no seteará las hojas porque originalmente ya son 0.0
 
     int max_radio = 0;
     Nodo *hijo = entry.a;
     for (Entry entrada : hijo->entries){
-        max_radio = max(max_radio, calcular_radio_cobertor(entrada) + (int)distancia_cuadrado(entry.p, entrada.p));
+        max_radio = max(max_radio, setear_radio_cobertor(entrada) + (int)distancia_cuadrado(entry.p, entrada.p));
     }
 
     entry.cr = max_radio;
