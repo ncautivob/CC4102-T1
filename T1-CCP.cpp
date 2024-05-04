@@ -311,3 +311,51 @@ Nodo *crear_MTree_CCP(const set<pair<double,double>> points){
     }
 }
 
+set<pair<double,double>> crear_set(int n){
+    set<pair<double,double>> ccp_set;
+    for(int j=0; j<n; j++){
+        random_device rd;
+        mt19937 gen(rd());
+        uniform_real_distribution<double> dis(0.0, 1.0); // Range [0.0, 1.0)
+
+        // Generate random double values
+        double first = dis(gen);
+        double second = dis(gen);
+
+        // Create and return the pair
+        ccp_set.insert(make_pair(first, second));
+    }
+    return ccp_set;
+}
+
+void imprimirArbol(Nodo *arbol)
+{
+    if (arbol != NULL)
+    {
+
+        cout << "Nodo: " << arbol->entries.size() << "\n";
+        for (int i = 0; i < arbol->entries.size(); i++) {
+            cout << "Entrada: " << arbol->entries[i].p.first << "" << arbol->entries[i].p.second << " con radio igual a " << arbol->entries[i].cr << " \n";
+        }
+
+        for (int i = 0; i < arbol->entries.size(); i++) {
+            imprimirArbol(arbol->entries[i].a);
+        }
+    }
+    else {
+        cout << "Llego a externo \n";
+    }
+}
+
+int main() {
+    // Generate a random pair of double values
+    set<pair<double, double>> random_pairs = crear_set(5);
+
+    // Print the generated pair
+    for(pair<double,double> random_pair : random_pairs){
+        cout << "Random pairs: (" << random_pair.first << ", " << random_pair.second << ")" << std::endl;
+    }
+    
+
+    return 0;
+}
