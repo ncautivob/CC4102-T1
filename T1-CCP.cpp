@@ -6,9 +6,6 @@
  * Método: Ciaccia Patella
 */
 
-// De acuerdo a esto, diremos que cada nodo tendrá como capacidad B entradas en disco, es decir, que
-// el tamaño de un nodo es a lo más B · sizeof(entry).
-
 #include <cstddef>
 #include <iostream>
 #include <set>
@@ -25,19 +22,17 @@
 
 using namespace std;
 
-int B_solo = 4096; // capacidad máxima de un nodo
+int B_solo = 4096; // esto dividido en sizeof(entry) equivale al B real
 struct Nodo;
 
-// para probar que funcionen los commits xd
 typedef struct Entry { // una entrada de un nodo
     pair<double, double> p;
     double cr;
     Nodo *a;
 } Entry;
 
-size_t tamaño_max = B * sizeof(Entry); // capacidad: B entradas en disco
 int b_min = 0.5 * B; // capacidad mínima
-int B = B_solo / sizeof(Entry); // capacidad máxima
+int B = B_solo / sizeof(Entry); // duda: INT O SIZE_T?
 
 // establecer semilla
 unsigned seed = chrono::system_clock::now().time_since_epoch().count();
@@ -48,16 +43,6 @@ typedef struct Nodo {
     int altura;
     int b_min = 0.5 * B; // capacidad mínima
     int b_max = B; // capacidad máxima
-
-    /** métodos a definir:
-    1. insertar entrada nueva:
-    - esta función permite agregar una nueva entrada al vector entries ssi no se ha logrado la capacidad máxima
-    - no se preocupa de la capacidad mínima, pues entiende que cuando se utiliza este método:
-    o estamos hablando de la raíz
-    o se accedió a un caso donde el nodo ya ha sido inicializado correctamente (tiene más o exactamente B/2 nodos)
-    2. eliminar una entrada del vector de entradas:
-    - no necesita revisar la capacidad máxima, pero SÍ la mínima!
-    */
     
     // insertar nueva entrada en entries
     void insertarEntry(const Entry entrada) {
@@ -96,11 +81,7 @@ double distancia_cuadrado(const pair<double,double> punto1, const pair<double,do
 map<pair<double, double>, set<pair<double, double>>> punto_mas_cercano(const set<pair<double, double>> points, map<pair<double, double>, set<pair<double, double>>> mapa){
     for(pair<double,double> punto: points){
         // le asignamos su sample más cercano!
-
-        // para esto podemos utilizar la ventaja del orden
-        // dado que en el mapa las llaves están ordenadas, podemos usar búsqueda binaria(?)
-
-        // o simplemente hacer una pasada lineal y ser felices xd (rip cuenteo)
+        // problema con binsearch: 2d
 
         double mas_cercano = numeric_limits<double>::max(); // el más grande de los doubles
         pair<double,double> punto_mas_cercano = make_pair(0.0, 0.0);
@@ -120,7 +101,7 @@ map<pair<double, double>, set<pair<double, double>>> punto_mas_cercano(const set
 }
 
 /** función que, dada una raíz de un árbol, encuentra los subárboles de altura h que estén en él 
- * nota: dado que h es la altura mínima de los árboles, entonces nunca ocurrirá que no se encuentren
+ * nota: dado que h es la altura mínima de los árboles, entonces nunca ocurrirá que no se encuentre ninguno
 */
 set<Nodo*> busqueda_h(Nodo *nodo, const int h, set<Nodo*>& arboles) {
     if(nodo->altura == h){
@@ -136,7 +117,6 @@ set<Nodo*> busqueda_h(Nodo *nodo, const int h, set<Nodo*>& arboles) {
 }
 
 int setear_radio_cobertor(Entry& entry){ // no seteará las hojas porque originalmente ya son 0.0
-
 
     int max_radio = 0;
     Nodo *hijo = entry.a;
@@ -185,8 +165,6 @@ Nodo *crear_MTree_CCP(const set<pair<double,double>> points){
         map<pair<double,double>, set<pair<double,double>>> samples;
         int k = min(B, n/B);
         do{
-            // IDEA: los primeros k después del shuffle son los seleccionados.
-            
             vector<int> indices(n); // un vector de tamaño n
             for(int i = 0; i < n; ++i){
                 indices[i] = i; // agregamos los números del 0 al n-1
@@ -209,7 +187,6 @@ Nodo *crear_MTree_CCP(const set<pair<double,double>> points){
                     punto_escogido++;
                 }
                 // se llegó al punto del iterador! se agrega a samples con un un conjunto vacío
-                // samples.insert(*punto_escogido)
                 samples[*punto_escogido] = set<pair<double,double>>();
                 it++;
             }
@@ -232,17 +209,14 @@ Nodo *crear_MTree_CCP(const set<pair<double,double>> points){
                 }
             }
 
-        } while (samples.size() == 1);
+        } while (samples.size() == 1); //5. Si |F| = 1, volver al paso 2.
 
-        //5. Si |F| = 1, volver al paso 2.
-
-        int h = numeric_limits<int>::max(); //la altura mínima de los árboles Tj.
+        int h = numeric_limits<int>::max(); // la altura mínima de los árboles Tj.
 
         // 6. Se realiza recursivamente el algoritmo CP en cada Fj, obteniendo el árbol Tj
         // si llegamos a esta parte, samples tiene más de un conjunto c:
-        //nodo raiz; // el nodo al que asociaremos hijos y cosas
+
         map<pair<double,double>, Nodo*>  subarboles;
-        //nodo raiz;
         for(const auto& par : samples){
             Nodo *sub_arbol = crear_MTree_CCP(par.second); // se llama recursivamente a crear_MTree_CCP con los conjuntos de cada uno
             // cada llamada devuelve un nodo (raíz de árbol). luego, tendremos varios árboles Tj.
@@ -304,7 +278,7 @@ Nodo *crear_MTree_CCP(const set<pair<double,double>> points){
             }
         }
         
-        set<pair<double,double>> keys; // las llaves de F (finalmente, F)
+        //set<pair<double,double>> keys; // las llaves de F (finalmente, F)
 
         // 10. Se define Tsup como el resultado de la llamada al algoritmo CP aplicado a F.
 
