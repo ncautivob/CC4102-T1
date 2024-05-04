@@ -25,7 +25,7 @@
 
 using namespace std;
 
-int B; // capacidad máxima de un nodo
+int B_solo = 4096; // capacidad máxima de un nodo
 struct Nodo;
 
 // para probar que funcionen los commits xd
@@ -37,7 +37,7 @@ typedef struct Entry { // una entrada de un nodo
 
 size_t tamaño_max = B * sizeof(Entry); // capacidad: B entradas en disco
 int b_min = 0.5 * B; // capacidad mínima
-int b_max = B; // capacidad máxima
+int B = B_solo / sizeof(Entry); // capacidad máxima
 
 // establecer semilla
 unsigned seed = chrono::system_clock::now().time_since_epoch().count();
@@ -137,8 +137,12 @@ set<Nodo*> busqueda_h(Nodo *nodo, const int h, set<Nodo*>& arboles) {
 
 int setear_radio_cobertor(Entry& entry){ // no seteará las hojas porque originalmente ya son 0.0
 
+
     int max_radio = 0;
     Nodo *hijo = entry.a;
+    if(hijo == nullptr){
+        return 0;
+    }
     for (Entry entrada : hijo->entries){
         max_radio = max(max_radio, setear_radio_cobertor(entrada) + (int)distancia_cuadrado(entry.p, entrada.p));
     }
