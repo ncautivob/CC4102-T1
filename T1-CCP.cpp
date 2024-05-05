@@ -31,8 +31,8 @@ typedef struct Entry { // una entrada de un nodo
     Nodo *a;
 } Entry;
 
-int b_min = 0.5 * B; // capacidad mínima
 int B = B_solo / sizeof(Entry); // duda: INT O SIZE_T?
+int b_min = 0.5 * B; // capacidad mínima
 
 // establecer semilla
 unsigned seed = chrono::system_clock::now().time_since_epoch().count();
@@ -148,7 +148,7 @@ int setear_radio_cobertor(Entry& entry){ // no seteará las hojas porque origina
 Nodo *crear_MTree_CCP(const set<pair<double,double>> points){
     int n = points.size();
     if(n <= B){ // entran todos los puntos en un nodo
-        Nodo *T; // se crea un árbol T (un nodo raíz con vector entries vacío)
+        Nodo *T = new Nodo; // se crea un árbol T (un nodo raíz con vector entries vacío)
         // se insertan todos los puntos a T
         for (pair<double,double> punto: points){
             // crear entrada, inicialmente con radio cobertor y a nulos.
@@ -316,7 +316,7 @@ set<pair<double,double>> crear_set(int n){
     for(int j=0; j<n; j++){
         random_device rd;
         mt19937 gen(rd());
-        uniform_real_distribution<double> dis(0.0, 1.0); // Range [0.0, 1.0)
+        uniform_real_distribution<double> dis(-100.0, 100.0);
 
         // Generate random double values
         double first = dis(gen);
@@ -348,13 +348,41 @@ void imprimirArbol(Nodo *arbol)
 }
 
 int main() {
-    // Generate a random pair of double values
     set<pair<double, double>> random_pairs = crear_set(5);
-
-    // Print the generated pair
     for(pair<double,double> random_pair : random_pairs){
-        cout << "Random pairs: (" << random_pair.first << ", " << random_pair.second << ")" << std::endl;
+        //cout << "Random pairs: (" << random_pair.first << ", " << random_pair.second << ")" << endl;
     }
+    cout << "hola" << endl;
+    cout << "B es " << B << endl;
+    int n = random_pairs.size();
+    if(n <= B){ // entran todos los puntos en un nodo
+        Nodo *T = new Nodo; // se crea un árbol T (un nodo raíz con vector entries vacío)
+        T->entries = vector<Entry>();
+        T->altura = 0;
+        cout << T->entries.size() << endl;
+        // se insertan todos los puntos a T
+        for (pair<double,double> punto: random_pairs){
+            // crear entrada, inicialmente con radio cobertor y a nulos.
+            Entry entrada;
+            entrada.p = punto;
+            entrada.cr = 0.0; // pues double
+            entrada.a = nullptr; // pues puntero
+            (*T).insertarEntry(entrada);
+        }
+        for (Entry entry: T->entries){
+            // crear entrada, inicialmente con radio cobertor y a nulos.
+            cout << entry.p.first << " " << entry.p.second << endl;
+            cout << entry.cr << endl;
+            cout << entry.a << endl;
+        }
+        delete T;
+    }
+    Nodo *arbol = crear_MTree_CCP(random_pairs);
+    for(Entry entry : arbol->entries){
+        cout << "hola" << endl;
+        cout << "entry: " << entry.p.first << " " << entry.p.second << endl;
+    }
+    delete arbol;
     
 
     return 0;
