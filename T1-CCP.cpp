@@ -63,7 +63,7 @@ typedef struct Nodo {
     }
 } Nodo;
 
-double distancia_cuadrado(const pair<double,double> punto1, const pair<double,double> punto2){
+double distancia_cuadrado(pair<double,double>& punto1, pair<double,double>& punto2){
     // diferencia de coordenadas
     double dx = punto1.first - punto2.first;
     double dy = punto1.second - punto2.second;
@@ -79,6 +79,7 @@ double distancia_cuadrado(const pair<double,double> punto1, const pair<double,do
  * y luego se agrega al conjunto asociado a dicho punto
 */
 map<pair<double, double>, set<pair<double, double>>> punto_mas_cercano(const set<pair<double, double>> points, map<pair<double, double>, set<pair<double, double>>> mapa){
+    cout << "se entró a esta parte wii " << endl;
     for(pair<double,double> punto: points){
         // le asignamos su sample más cercano!
         // problema con binsearch: 2d
@@ -162,9 +163,11 @@ Nodo *crear_MTree_CCP(const set<pair<double,double>> points){
         return T; // se retorna T
     }
     else{
-        map<pair<double,double>, set<pair<double,double>>> samples;
         int k = min(B, n/B);
+        cout << "k es" << k << endl;
+        map<pair<double,double>, set<pair<double,double>>> samples;
         do{
+            samples = map<pair<double,double>, set<pair<double,double>>>();
             vector<int> indices(n); // un vector de tamaño n
             for(int i = 0; i < n; ++i){
                 indices[i] = i; // agregamos los números del 0 al n-1
@@ -187,6 +190,7 @@ Nodo *crear_MTree_CCP(const set<pair<double,double>> points){
                     punto_escogido++;
                 }
                 // se llegó al punto del iterador! se agrega a samples con un un conjunto vacío
+                cout << (*punto_escogido).first << " " << (*punto_escogido).second << endl;
                 samples[*punto_escogido] = set<pair<double,double>>();
                 it++;
             }
@@ -230,7 +234,7 @@ Nodo *crear_MTree_CCP(const set<pair<double,double>> points){
             }
             else{
                 // se quita la raiz, se elimina pfj de F y se trabaja con sus subárboles
-                //samples.erase(par.first);
+                samples.erase(par.first);
                 // para acceder a los subárboles, encontraremos los nodos a los que referencia cada entry
                 // luego, estos nodos los agregagremos al set de subarboles
                 // y finalmente, agregamos las entradas que tenía la raíz del subárbol a samples.
@@ -247,11 +251,11 @@ Nodo *crear_MTree_CCP(const set<pair<double,double>> points){
         }
 
         // 8. Etapa de balanceamiento: Se define h como la altura mínima de los árboles Tj.
-        // Se define T"'" inicialmente como un conjunto vacío.
+        // Se define T' inicialmente como un conjunto vacío.
 
         set<Nodo*> T2 = set<Nodo*>();
 
-        // 9. Por cada Tj , si su altura es igual a h, se añade a T"′". Si no se cumple:
+        // 9. Por cada Tj , si su altura es igual a h, se añade a T′. Si no se cumple:
         // ** esto podría ser una fn recursiva, tal que la pueda llamar de nuevo!!
         for(const auto& par_T_j : subarboles){
             pair<double,double> clave = par_T_j.first;
@@ -293,7 +297,7 @@ Nodo *crear_MTree_CCP(const set<pair<double,double>> points){
         // 12. Se setean los radios cobertores resultantes para cada entrada en este árbol.
 
         // 13. Se retorna T .
-        Nodo *Tsup;
+        Nodo *Tsup = new Nodo;
         int altura_max = 0;
         for(const auto& pair : subarboles){ // uno con los hijos
             (*Tsup).insertarEntry({pair.first, 0.0, pair.second});
@@ -348,35 +352,12 @@ void imprimirArbol(Nodo *arbol)
 }
 
 int main() {
-    set<pair<double, double>> random_pairs = crear_set(5);
+    set<pair<double, double>> random_pairs = crear_set(256);
     for(pair<double,double> random_pair : random_pairs){
         //cout << "Random pairs: (" << random_pair.first << ", " << random_pair.second << ")" << endl;
     }
     cout << "hola" << endl;
     cout << "B es " << B << endl;
-    int n = random_pairs.size();
-    if(n <= B){ // entran todos los puntos en un nodo
-        Nodo *T = new Nodo; // se crea un árbol T (un nodo raíz con vector entries vacío)
-        T->entries = vector<Entry>();
-        T->altura = 0;
-        cout << T->entries.size() << endl;
-        // se insertan todos los puntos a T
-        for (pair<double,double> punto: random_pairs){
-            // crear entrada, inicialmente con radio cobertor y a nulos.
-            Entry entrada;
-            entrada.p = punto;
-            entrada.cr = 0.0; // pues double
-            entrada.a = nullptr; // pues puntero
-            (*T).insertarEntry(entrada);
-        }
-        for (Entry entry: T->entries){
-            // crear entrada, inicialmente con radio cobertor y a nulos.
-            cout << entry.p.first << " " << entry.p.second << endl;
-            cout << entry.cr << endl;
-            cout << entry.a << endl;
-        }
-        delete T;
-    }
     Nodo *arbol = crear_MTree_CCP(random_pairs);
     for(Entry entry : arbol->entries){
         cout << "hola" << endl;
