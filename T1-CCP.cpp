@@ -105,7 +105,7 @@ void punto_mas_cercano(const set<pair<double, double>>& points, map<pair<double,
 /** función que, dada una raíz de un árbol, encuentra los subárboles de altura h que estén en él 
  * nota: dado que h es la altura mínima de los árboles, entonces nunca ocurrirá que no se encuentre ninguno
 */
-set<Nodo*> busqueda_h(Nodo *nodo, const int h, set<Nodo*>& arboles) {
+void busqueda_h(Nodo *nodo, const int h, set<Nodo*>& arboles) {
     if(nodo->altura == h){
         arboles.insert(nodo);
     }
@@ -115,7 +115,6 @@ set<Nodo*> busqueda_h(Nodo *nodo, const int h, set<Nodo*>& arboles) {
             busqueda_h(hijo.a, h, arboles);
         }
     }
-    return arboles;
 }
 
 int setear_radio_cobertor(Entry& entry){ // no seteará las hojas porque originalmente ya son 0.0
@@ -216,7 +215,7 @@ Nodo *crear_MTree_CCP(const set<pair<double,double>> points){
                     punto_mas_cercano(conjunto_copia, samples);
                     cout << "deberia haberse redistribuido " << endl;
                 } else {
-                    ++it; // Avanzamos al siguiente elemento
+                    ++it; // Avanzamos al sgte elemento
                 }
             }
         } while (samples.size() < 1);
@@ -265,21 +264,26 @@ Nodo *crear_MTree_CCP(const set<pair<double,double>> points){
 
         // 9. Por cada Tj , si su altura es igual a h, se añade a T′. Si no se cumple:
         // ** esto podría ser una fn recursiva, tal que la pueda llamar de nuevo!!
+        cout << "subarboles tiene " << subarboles.size() << "subarboles" << endl;
+        for(const auto& par_T_j : subarboles){
+            cout << "y los subarboles tienen un conj de tamaño" << (subarboles[par_T_j.first]->entries).size() << endl;
+        }
+        
+        set<pair<double,double>> claves_a_eliminar;
         for(const auto& par_T_j : subarboles){
             pair<double,double> clave = par_T_j.first;
             Nodo *T_j = par_T_j.second;
             if(T_j->altura== h){
                 T2.insert(T_j);
+                cout << "T_j insertado" << endl;
             }
             else{
-                // 9.1 Se borra el punto pertinente en F.
-                subarboles.erase(clave);
-
                 // 9.2 Se hace una búsqueda exhaustiva en Tj de todos los subárboles T′ 1, . . . , T' p de altura igual a h.
                 // Se insertan estos árboles a T′
                 set<Nodo*> empty_set;
-                set<Nodo *> subtrees_h = busqueda_h(T_j, h, empty_set); // funcion que busca y retorna un set con los subárboles de altura h que tiene T_j
-                for (Nodo *subtree_h : subtrees_h) {
+                busqueda_h(T_j, h, empty_set); // funcion que busca y retorna un set con los subárboles de altura h que tiene T_j
+                cout << "empty_set logró encontrar " << empty_set.size() << "arboles de altura h" << endl;
+                for (Nodo *subtree_h : empty_set) {
                     T2.insert(subtree_h);
 
                     // 9.3 Se insertan los puntos raíz de T′1, . . . , T′ p: p′ f1, . . . , p′ fp en F
@@ -287,10 +291,16 @@ Nodo *crear_MTree_CCP(const set<pair<double,double>> points){
                         subarboles[entrada_h.p] = entrada_h.a;
                     }
                 }
+                // 9.1 Se borra el punto pertinente en F.
+                claves_a_eliminar.insert(clave);
             }
         }
+        for(pair<double,double> clave : claves_a_eliminar){
+            cout << "eliminando clave" << endl;
+            subarboles.erase(clave);
+        }
         
-        //set<pair<double,double>> keys; // las llaves de F (finalmente, F)
+        set<pair<double,double>> keys; // las llaves de F (finalmente, F)
 
         // 10. Se define Tsup como el resultado de la llamada al algoritmo CP aplicado a F.
 
@@ -316,8 +326,11 @@ Nodo *crear_MTree_CCP(const set<pair<double,double>> points){
         }
         // setear altura de acuerdo a la altura mayor de sus nodos hijos
         Tsup->altura = altura_max + 1;
+        cout << "la altura seteada fue " << Tsup->altura << endl;
+        cout << "verificar que sea h+1" << endl;
         for(Entry entrada: Tsup->entries){
             setear_radio_cobertor(entrada);
+            cout << "el radio cobertor seteado fue " << entrada.cr << endl;
         }
         return Tsup;
     }
