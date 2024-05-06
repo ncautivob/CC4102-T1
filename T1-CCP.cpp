@@ -106,6 +106,23 @@ void busqueda_h(Nodo *nodo, const int h, set<Nodo*>& arboles) {
     }
 }
 
+void conectar_arboles(Nodo* nodo, map<pair<double,double>,Nodo*>& subarboles){
+    vector<Entry>& entries = nodo->entries;
+    if (entries[0].a==nullptr) { // encontramos una hoja
+        for(int j = 0; j<entries.size(); j++){
+            pair<double,double> punto_hoja = entries[j].p;
+            entries[j].a = subarboles[punto_hoja];
+        }
+    }
+    else { // seguimos buscando hojas
+        // Si el nodo no es una hoja, recorre recursivamente sus entradas
+        for (const auto& entry : entries) {
+            conectar_arboles(entry.a, subarboles);
+        }
+    }
+}
+
+
 int setear_radio_cobertor(Entry& entry){ // no seteará las hojas porque originalmente ya son 0.0
 
     int max_radio = 0;
@@ -244,11 +261,14 @@ Nodo *crear_MTree_CCP(const set<pair<double,double>> points){
         }
         
         set<pair<double,double>> claves_a_eliminar;
+        set<pair<double,double>> keys; // las llaves de F (finalmente, F)
+
         for(const auto& par_T_j : subarboles){
             pair<double,double> clave = par_T_j.first;
             Nodo *T_j = par_T_j.second;
             if(T_j->altura== h){
                 T2.insert(T_j);
+                keys.insert(clave);
                 cout << "T_j insertado" << endl;
             }
             else{
@@ -262,7 +282,9 @@ Nodo *crear_MTree_CCP(const set<pair<double,double>> points){
 
                     // 9.3 Se insertan los puntos raíz de T′1, . . . , T′ p: p′ f1, . . . , p′ fp en F
                     for (Entry entrada_h : subtree_h->entries){
-                        subarboles[entrada_h.p] = entrada_h.a;
+                        pair<double,double> clave_h = entrada_h.p;
+                        subarboles[clave_h] = entrada_h.a;
+                        keys.insert(clave_h);
                     }
                 }
                 // 9.1 Se borra el punto pertinente en F.
@@ -273,18 +295,19 @@ Nodo *crear_MTree_CCP(const set<pair<double,double>> points){
             cout << "eliminando clave" << endl;
             subarboles.erase(clave);
         }
-        
-        set<pair<double,double>> keys; // las llaves de F (finalmente, F)
 
         // 10. Se define Tsup como el resultado de la llamada al algoritmo CP aplicado a F.
 
-        //Nodo *Tsup = crear_MTree_CCP(keys);
-        
+        Nodo *Tsup = crear_MTree_CCP(keys);
+
         // 11. Se une cada Tj ∈ T′ a su hoja en Tsup correspondiente al punto pfj ∈ F, obteniendo un nuevo árbol T.
-        //for(Nodo *T_j : T2) {
-            // unirlo a su hoja en Tsup!!
-            // cómo ...
-        //}
+
+        // Para lograr esto, debo encontrar las hojas de Tsup.
+        // Hipótesis útil: si la primera entrada apunta a un puntero nulo, entonces llegamos a una hoja.
+        // Tan pronto encuentro un punto, debo asociarlo a su conjunto.
+        // Si el nodo es una hoja (no tiene entradas), imprime sus puntos
+
+        conectar_arboles(Tsup, subarboles);
 
         // 12. Se setean los radios cobertores resultantes para cada entrada en este árbol.
 
