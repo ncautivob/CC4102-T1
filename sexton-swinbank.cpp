@@ -3,17 +3,23 @@ using namespace std;
 
 using Point = pair<double, double>;
 
+struct Node;
+
 typedef struct {
   Point point;
   double coveringRadius;
-  set<Entry>* children;  // If not set<Entry>, then it is a single point.
+  Node* children;
 } Entry;
 
 #define ENTRY_SIZE sizeof(Entry)
 #define B 4096 / ENTRY_SIZE
 #define b 0.5 * B / ENTRY_SIZE
 
-using Node = set<Entry>;            // Entries set.
+using Entries = set<Entry>;
+// Entries set.
+typedef struct Node {
+  Entries entries;
+} Node;
 using Nodes = set<Node>;            // Set that have entries set as elements.
 using Points = set<Point>;          // Set of points.
 using PointClusters = set<Points>;  // Set that have points set as elements.
@@ -29,6 +35,8 @@ double distance(Point& firstPoint, Point& secondPoint) {
 
   return (double)delta_x * delta_x + delta_y * delta_y;
 }
+
+Entries getNodeEntries(Node node) { return node.entries; }
 
 /**
  * Uses the MinMax split policy to separate a cluster into two.
@@ -193,6 +201,45 @@ Points pointsUnion(Points first, Points second) {
   return result;
 }
 
+/**
+ * Computes a medioid given a set of points.
+ * If multiple medioids, it computes the last in the set order.
+ */
+Point computeMedioid(Points input) {
+  if (input.empty()) return {0.0, 0.0};
+
+  Point initial = *(input.begin());
+  Point candidateMedioid = initial;
+
+  // A very large number, because we want to minimize.
+  double minTotalDistance = DBL_MAX;
+
+  for (auto entry = input.begin(); entry != input.end(); entry++) {
+    // Initialize the total distance for this point.
+    double totalDistance = 0.0;
+    // The current point to be compared.
+    Point point = *entry;
+
+    for (auto otherEntry = input.begin(); otherEntry != input.end();
+         otherEntry++) {
+      Point otherPoint = *otherEntry;
+
+      totalDistance += distance(point, otherPoint);
+    }
+
+    /**
+     * <= is a relajation to choose the very last point that
+     * verifies this condition.
+     */
+    if (totalDistance <= minTotalDistance) {
+      minTotalDistance = totalDistance;
+      candidateMedioid = point;
+    }
+  }
+
+  return candidateMedioid;
+}
+
 PointClusters nearestPointClusters(PointClusters input) {
   double minDistance = DBL_MAX;
   PointClusters candidateNearest = {NULL, NULL};
@@ -251,45 +298,6 @@ Points nearestNeighbour(Points objective, PointClusters clusters) {
 }
 
 /**
- * Computes a medioid given a set of points.
- * If multiple medioids, it computes the last in the set order.
- */
-Point computeMedioid(Points input) {
-  if (input.empty()) return {0.0, 0.0};
-
-  Point initial = *(input.begin());
-  Point candidateMedioid = initial;
-
-  // A very large number, because we want to minimize.
-  double minTotalDistance = DBL_MAX;
-
-  for (auto entry = input.begin(); entry != input.end(); entry++) {
-    // Initialize the total distance for this point.
-    double totalDistance = 0.0;
-    // The current point to be compared.
-    Point point = *entry;
-
-    for (auto otherEntry = input.begin(); otherEntry != input.end();
-         otherEntry++) {
-      Point otherPoint = *otherEntry;
-
-      totalDistance += distance(point, otherPoint);
-    }
-
-    /**
-     * <= is a relajation to choose the very last point that
-     * verifies this condition.
-     */
-    if (totalDistance <= minTotalDistance) {
-      minTotalDistance = totalDistance;
-      candidateMedioid = point;
-    }
-  }
-
-  return candidateMedioid;
-}
-
-/**
  * Returns a tuple (g, r, a) where g is the primary medioid of the input,
  * r is the covering radius, and a the node direction.
  */
@@ -299,9 +307,10 @@ Entry OutputLeafPage(Points input) {
   Node cluster;
 
   for (Point p : input) {
-    Entry newEntry = {p, NULL, NULL};
+    // 0.0 as NULL in double entry gives a warning.
+    Entry newEntry = {p, 0.0, nullptr};
 
-    cluster.insert(newEntry);
+    getNodeEntries(cluster).insert(newEntry);
     r = max(r, distance(g, p));
   }
 
@@ -317,82 +326,23 @@ Entry OutputLeafPage(Points input) {
 Entry OutputInternalPage(Node input) {
   Points C_in;
   // We add the points in the input node to C_in.
-  for (Entry entry : input) C_in.insert(entry.point);
+  for (Entry entry : getNodeEntries(input)) C_in.insert(entry.point);
 
   Point G = computeMedioid(C_in);
   double R = 0.0;
   Node cluster;
 
-  for (Entry entry : input) {
+  for (Entry entry : getNodeEntries(input)) {
     Point g = entry.point;
     double r = entry.coveringRadius;
-    Entry* a = entry.children;
+    Node* a = entry.children;
 
-    cluster.insert(entry);
+    getNodeEntries(cluster).insert(entry);
     R = max(R, distance(G, g) + r);
   }
 
   Node* A = &cluster;
   return {G, R, A};
-}
-
-Entry* SSAlgorithm(Points input) {
-  // There are at most B points.
-  if (input.size() <= B) {
-    Entry rootRepresentation = OutputLeafPage(input);
-    return rootRepresentation.children;
-  }
-
-  // We have > B points. Then, we must do clustering to reduce size.
-  PointClusters C_out = cluster(input);
-  Node C = {};
-
-  for (Points points : C_out) {
-    C.insert(OutputLeafPage(points));
-  }
-
-  /**
-   * We do this in order to retrieve an entry given a point, to optimize
-   * search. Warning: Saving is global, and it doesn't reset in every while
-   * iteration, this may be a problem.
-   */
-  map<Point, Entry> pointToEntry;
-
-  while (C.size() > B) {
-    Points C_in;
-
-    // We insert into C_in the points contained in C.
-    for (Entry entry : C) {
-      Point point = entry.point;
-      C_in.insert(point);
-
-      // Only add to the mapping if is not present.
-      if (pointToEntry.find(point) == pointToEntry.end()) {
-        pointToEntry[point] = entry;
-      }
-    }
-
-    // Clustering again to reduce set size of C.
-    C_out = cluster(C_in);
-    Nodes C_mra = {};
-
-    for (Points points : C_out) {
-      Node s;
-      for (Point point : points) {
-        s.insert(pointToEntry[point]);
-      }
-
-      C_mra.insert(s);
-    }
-
-    C = {};
-    for (Node node : C_mra) {
-      C.insert(OutputInternalPage(node));
-    }
-  }
-
-  Entry rootRepresentation = OutputInternalPage(C);
-  return rootRepresentation.children;
 }
 
 /**
@@ -458,7 +408,85 @@ PointClusters cluster(Points input) {
   return C_out;
 };
 
+Node* SSAlgorithm(Points input) {
+  // There are at most B points.
+  if (input.size() <= B) {
+    Entry rootRepresentation = OutputLeafPage(input);
+    return rootRepresentation.children;
+  }
+
+  // We have > B points. Then, we must do clustering to reduce size.
+  PointClusters C_out = cluster(input);
+  Node C = {};
+
+  for (Points points : C_out) {
+    getNodeEntries(C).insert(OutputLeafPage(points));
+  }
+
+  /**
+   * We do this in order to retrieve an entry given a point, to optimize
+   * search. Warning: Saving is global, and it doesn't reset in every while
+   * iteration, this may be a problem.
+   */
+  map<Point, Entry> pointToEntry;
+
+  while (getNodeEntries(C).size() > B) {
+    Points C_in;
+
+    // We insert into C_in the points contained in C.
+    for (Entry entry : getNodeEntries(C)) {
+      Point point = entry.point;
+      C_in.insert(point);
+
+      // Only add to the mapping if is not present.
+      if (pointToEntry.find(point) == pointToEntry.end()) {
+        pointToEntry[point] = entry;
+      }
+    }
+
+    // Clustering again to reduce set size of C.
+    C_out = cluster(C_in);
+    Nodes C_mra = {};
+
+    for (Points points : C_out) {
+      Node s;
+      for (Point point : points) {
+        getNodeEntries(s).insert(pointToEntry[point]);
+      }
+
+      C_mra.insert(s);
+    }
+
+    C = {};
+    for (Node node : C_mra) {
+      getNodeEntries(C).insert(OutputInternalPage(node));
+    }
+  }
+
+  Entry rootRepresentation = OutputInternalPage(C);
+  return rootRepresentation.children;
+};
+
+Points createSet(int n) {
+  Points result;
+
+  while (n--) {
+    random_device rd;
+    mt19937 gen(rd());
+    uniform_real_distribution<double> dis(0.0, 1.0);
+
+    double first = dis(gen);
+    double second = dis(gen);
+
+    result.insert({first, second});
+  }
+
+  return result;
+}
+
 int main() {
-  // The test set goes here...
+  Points testSet = createSet(256);
+  Node* root = SSAlgorithm(testSet);
+
   return 0;
 }
