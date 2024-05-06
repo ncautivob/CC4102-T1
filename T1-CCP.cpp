@@ -106,37 +106,60 @@ void busqueda_h(Nodo *nodo, const int h, set<Nodo*>& arboles) {
     }
 }
 
+/** Función que conecta los subarboles Tj a las hojas de Tsup, arreglando las alturas en el proceso*/
 void conectar_arboles(Nodo* nodo, map<pair<double,double>,Nodo*>& subarboles){
     vector<Entry>& entries = nodo->entries;
+    int altura_max = 0;
     if (entries[0].a==nullptr) { // encontramos una hoja
         for(int j = 0; j<entries.size(); j++){
             pair<double,double> punto_hoja = entries[j].p;
             entries[j].a = subarboles[punto_hoja];
+            nodo->altura = 2;
+            
         }
+
     }
     else { // seguimos buscando hojas
         // Si el nodo no es una hoja, recorre recursivamente sus entradas
         for (const auto& entry : entries) {
             conectar_arboles(entry.a, subarboles);
+            int altura = ((entry.a)->altura)+1;
+            if (altura > altura_max){
+                altura_max = altura;
+            }
         }
+        nodo->altura = altura_max;
     }
+    cout << "la altura seteada fue " << nodo->altura << endl;
+    cout << "verificar que sea h+1" << endl;
 }
 
 
-int setear_radio_cobertor(Entry& entry){ // no seteará las hojas porque originalmente ya son 0.0
+double setear_radio_cobertor(Entry& entry){ // no seteará las hojas porque originalmente ya son 0.0
 
-    int max_radio = 0;
+    double max_radio = 0;
+    pair<double,double> punto = entry.p;
     Nodo *hijo = entry.a;
-    if(hijo == nullptr){
-        return 0;
+    // vamos a maximizar (radio_cobertor_hijo + distancia_al_hijo)
+    for (Entry entrada : hijo->entries) { // revisamos las entradas del hijo
+        double radio_cobertor_hijo = entrada.cr;
+        double distancia = sqrt(distancia_cuadrado(punto, entrada.p));
+        if ((radio_cobertor_hijo + distancia)>max_radio){
+            max_radio = radio_cobertor_hijo + distancia;
+        }
     }
-    for (Entry entrada : hijo->entries){
-        max_radio = max(max_radio, setear_radio_cobertor(entrada) + (int)distancia_cuadrado(entry.p, entrada.p));
-    }
-
     entry.cr = max_radio;
 
-    return max_radio;
+    // if(hijo == nullptr){ // hoja
+    //     return 0;
+    // }
+    // for (Entry entrada : hijo->entries){
+    //     max_radio = max(max_radio, setear_radio_cobertor(entrada) + (int)distancia_cuadrado(entry.p, entrada.p));
+    // }
+
+    // entry.cr = sqrt(max_radio);
+
+    return entry.cr;
 }
 
 
@@ -240,11 +263,16 @@ Nodo *crear_MTree_CCP(const set<pair<double,double>> points){
                 for(auto entrada = entradas.begin(); entrada != entradas.end(); entrada++){
                     Nodo *sub_subarbol = entrada->a;
                     subarboles[entrada->p] = sub_subarbol;
+                    cout << "la altura de este subarbol es" << sub_subarbol->altura << endl;
                     if(sub_subarbol->altura < h){
-                        h = sub_arbol->altura;
+                        h = sub_subarbol->altura;
                     }
                 }
                 cout << "verifiquemos ingreso " << subarboles.size() << endl;
+                for(const auto& par_T_j : subarboles){
+                    cout << "donde los puntos del subarbol son" << par_T_j.second->entries.size() << endl;
+                }
+                
             }
         }
         cout << "la altura minima encontrada fue " << h << endl;
@@ -312,19 +340,18 @@ Nodo *crear_MTree_CCP(const set<pair<double,double>> points){
         // 12. Se setean los radios cobertores resultantes para cada entrada en este árbol.
 
         // 13. Se retorna T .
-        Nodo *Tsup = new Nodo;
-        int altura_max = 0;
-        for(const auto& pair : subarboles){ // uno con los hijos
-            (*Tsup).insertarEntry({pair.first, 0.0, pair.second});
-            int altura = pair.second->altura;
-            if(altura > altura_max){
-                altura_max = altura;
-            }
-        }
+        //Nodo *Tsup = new Nodo;
+        // int altura_max = 0;
+        // for(const auto& pair : subarboles){ // uno con los hijos
+        //     // (*Tsup).insertarEntry({pair.first, 0.0, pair.second});
+        //     int altura = pair.second->altura;
+        //     if(altura > altura_max){
+        //         altura_max = altura;
+        //     }
+        // }
         // setear altura de acuerdo a la altura mayor de sus nodos hijos
-        Tsup->altura = altura_max + 1;
-        cout << "la altura seteada fue " << Tsup->altura << endl;
-        cout << "verificar que sea h+1" << endl;
+        //Tsup->altura = altura_max + 1;
+
         for(Entry entrada: Tsup->entries){
             setear_radio_cobertor(entrada);
             cout << "el radio cobertor seteado fue " << entrada.cr << endl;
