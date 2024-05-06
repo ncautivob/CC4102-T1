@@ -63,7 +63,7 @@ typedef struct Nodo {
     }
 } Nodo;
 
-double distancia_cuadrado(pair<double,double>& punto1, pair<double,double>& punto2){
+double distancia_cuadrado(const pair<double,double>& punto1, const pair<double,double>& punto2){
     // diferencia de coordenadas
     double dx = punto1.first - punto2.first;
     double dy = punto1.second - punto2.second;
@@ -78,16 +78,16 @@ double distancia_cuadrado(pair<double,double>& punto1, pair<double,double>& punt
 /** la siguiente función encuentra el punto más cercano dentro de las claves de un mapa,
  * y luego se agrega al conjunto asociado a dicho punto
 */
-map<pair<double, double>, set<pair<double, double>>> punto_mas_cercano(const set<pair<double, double>> points, map<pair<double, double>, set<pair<double, double>>> mapa){
+void punto_mas_cercano(const set<pair<double, double>>& points, map<pair<double, double>, set<pair<double, double>>>& mapa){
     cout << "se entró a esta parte wii " << endl;
     cout << "el mapa que se recibió tiene " << mapa.size() << "entradas " << endl;
-    for(pair<double,double> punto: points){
+    for(const pair<double,double>& punto: points){
         // le asignamos su sample más cercano!
         double mas_cercano = numeric_limits<double>::max(); // el más grande de los doubles
         pair<double,double> punto_mas_cercano = make_pair(0.0, 0.0);
         // aplicamos algoritmo
         for(const auto& par : mapa){
-            pair<double,double> clave = par.first;
+            const pair<double,double> clave = par.first;
             double distancia = distancia_cuadrado(clave, punto);
             if(distancia < mas_cercano){
                 mas_cercano = distancia;
@@ -100,7 +100,6 @@ map<pair<double, double>, set<pair<double, double>>> punto_mas_cercano(const set
     for(const auto& par : mapa){
         cout << "verifiquemos redistribucion" << par.second.size() << endl;
     }
-    return mapa;
 }
 
 /** función que, dada una raíz de un árbol, encuentra los subárboles de altura h que estén en él 
@@ -183,11 +182,7 @@ Nodo *crear_MTree_CCP(const set<pair<double,double>> points){
             for(int i = 0; i < k; ++i){
                 iteradores.insert(indices[i]); // recordar que los sets se ordenan de menor a mayor
             }
-            for(int iterador : iteradores) {
-                cout << "iterador es " << iterador << endl;
-            }
             // iterador
-            //auto it = iteradores.begin();
             auto punto_escogido = points.begin();
             int actual = 0;
             for(int iterador : iteradores){ // iteradores es el que detiene el loop, pues se entiende que nunca tendrá un valor mayor a n-1.
@@ -202,7 +197,7 @@ Nodo *crear_MTree_CCP(const set<pair<double,double>> points){
             }
 
             // 3. Se le asigna a cada punto en P su sample más cercano. Con eso se puede construir k conjuntos F1, . . . , Fk.
-            samples = punto_mas_cercano(points, samples);
+            punto_mas_cercano(points, samples);
             // conjuntos armados!
 
             // 4. Etapa de redistribución: Si algún Fj es tal que |Fj| < b:
@@ -225,21 +220,22 @@ Nodo *crear_MTree_CCP(const set<pair<double,double>> points){
                 set<pair<double,double>>& conjunto = it->second;
                 cout << "el conjunto mide " << conjunto.size() << endl;
                 if (conjunto.size() < b_min) {
+                    set<pair<double, double>> conjunto_copia = conjunto; // hacer una copia, espero esto funcione :c
                     it = samples.erase(it); // Quitamos pfj de F
                     // Para cada elemento que estaba en su conjunto, buscamos su otro sample más cercano
-                    samples = punto_mas_cercano(conjunto, samples);
+                    punto_mas_cercano(conjunto_copia, samples);
                     cout << "deberia haberse redistribuido " << endl;
                 } else {
                     ++it; // Avanzamos al siguiente elemento
                 }
             }
-        } while (samples.size() < 1); //5. Si |F| = 1, volver al paso 2.
+        } while (samples.size() < 1);
 
         int h = numeric_limits<int>::max(); // la altura mínima de los árboles Tj.
 
         // 6. Se realiza recursivamente el algoritmo CP en cada Fj, obteniendo el árbol Tj
         // si llegamos a esta parte, samples tiene más de un conjunto c:
-
+        cout << " en efecto samples tiene tamaño " << samples.size() << endl;
         map<pair<double,double>, Nodo*>  subarboles;
         for(const auto& par : samples){
             Nodo *sub_arbol = crear_MTree_CCP(par.second); // se llama recursivamente a crear_MTree_CCP con los conjuntos de cada uno
@@ -252,12 +248,11 @@ Nodo *crear_MTree_CCP(const set<pair<double,double>> points){
                 if(sub_arbol->altura < h){
                     h = sub_arbol->altura;
                 }
-                //raiz.insertarEntry({par.first, 0.0, &sub_arbol});
             }
             else{
                 cout << "rip, proceso sgte" << endl;
                 // se quita la raiz, se elimina pfj de F y se trabaja con sus subárboles
-                samples.erase(par.first);
+                // samples.erase(par.first);
                 // para acceder a los subárboles, encontraremos los nodos a los que referencia cada entry
                 // luego, estos nodos los agregagremos al set de subarboles
                 // y finalmente, agregamos las entradas que tenía la raíz del subárbol a samples.
