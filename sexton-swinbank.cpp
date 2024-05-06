@@ -1,12 +1,11 @@
 #include <bits/stdc++.h>
 using namespace std;
-typedef long double ld;
 
-using Point = pair<ld, ld>;
+using Point = pair<double, double>;
 
 typedef struct {
   Point point;
-  ld coveringRadius;
+  double coveringRadius;
   set<Entry>* children;  // If not set<Entry>, then it is a single point.
 } Entry;
 
@@ -24,24 +23,169 @@ using PointClusters = set<Points>;  // Set that have points set as elements.
  * As the square function strictly increases in the positive X-axis, then the
  * result doesn't change.
  */
-ld distance(Point& firstPoint, Point& secondPoint) {
-  ld delta_x = firstPoint.first - secondPoint.first;
-  ld delta_y = firstPoint.second - secondPoint.second;
+double distance(Point& firstPoint, Point& secondPoint) {
+  double delta_x = firstPoint.first - secondPoint.first;
+  double delta_y = firstPoint.second - secondPoint.second;
 
-  return (ld)delta_x * delta_x + delta_y * delta_y;
+  return (double)delta_x * delta_x + delta_y * delta_y;
 }
 
 /**
  * Uses the MinMax split policy to separate a cluster into two.
  */
 PointClusters splittingPolicy(Points input) {
-  // TODO
+  vector<Point> pointIndexing;
+  // distances[i] = (d, j), where d is distance(i, j).
+  vector<set<pair<double, int>>> distances;
+  // Marks if the point was already used or not.
+  vector<bool> used(input.size(), false);
+
+  // Point mapping to index
+  for (auto entry = input.begin(); entry != input.end(); entry++) {
+    Point point = *entry;
+    pointIndexing.push_back(point);
+  }
+
+  int numberOfPoints = pointIndexing.size();
+  // binom(n, 2) because distance is symmetric.
+  for (int i = 0; i < numberOfPoints; i++) {
+    Point first = pointIndexing[i];
+    for (int j = i + 1; j < numberOfPoints; j++) {
+      Point second = pointIndexing[j];
+
+      double dist = distance(first, second);
+      distances[i].insert({dist, j});
+      distances[j].insert({dist, i});
+    }
+  }
+
+  double minMaxRadius = DBL_MAX;
+  pair<int, int> candidateClusters = {NULL, NULL};
+
+  for (int i = 0; i < numberOfPoints; i++) {
+    for (int j = i + 1; j < numberOfPoints; j++) {
+      used[i] = true;
+      used[j] = true;
+
+      auto firstItr = distances[i].begin();
+      auto secondItr = distances[j].begin();
+
+      double firstRadius = 0.0;
+      double secondRadius = 0.0;
+
+      int usedPoints = 2;
+      while (usedPoints < numberOfPoints) {
+        // If used points are even, then it's i's turn. Otherwise, it's j's.
+        int turn = usedPoints % 2 == 0 ? i : j;
+
+        pair<double, int> selected;
+        if (turn == i) {
+          selected = *firstItr;
+
+          // Move the iterator while the selected point was already used...
+          while (used[selected.second]) {
+            firstItr++;
+            selected = *firstItr;
+          }
+
+          // selected.first is the distance between i and the selected point.
+          firstRadius = max(firstRadius, selected.first);
+          /**
+           * Mark as used and move the iterator as we don't care about this
+           * element anymore.
+           */
+          used[selected.second] = true;
+          firstItr++;
+        } else {
+          selected = *secondItr;
+
+          while (used[selected.second]) {
+            secondItr++;
+            selected = *secondItr;
+          }
+
+          secondRadius = max(secondRadius, selected.first);
+          used[selected.second] = true;
+          secondItr++;
+        }
+
+        usedPoints++;
+      }
+
+      double maxRadius = max(firstRadius, secondRadius);
+
+      if (maxRadius < minMaxRadius) {
+        minMaxRadius = maxRadius;
+        candidateClusters = {i, j};
+      }
+
+      // Reset used points for the next iteration.
+      used.assign(numberOfPoints, false);
+    }
+  }
+
+  /**
+   * As candidateClusters must have the best indices, we use them to
+   * generate the two set of points.
+   */
+  Points p, q;
+
+  int pIndex = candidateClusters.first;
+  int qIndex = candidateClusters.second;
+
+  /**
+   * These (pIndex, qIndex) are the points that generate this cluster
+   * configuration (p, q).
+   */
+  p.insert(pointIndexing[pIndex]);
+  q.insert(pointIndexing[qIndex]);
+
+  used[pIndex] = true;
+  used[qIndex] = true;
+
+  auto pItr = distances[pIndex].begin();
+  auto qItr = distances[qIndex].begin();
+
+  int usedPoints = 2;
+  while (usedPoints < numberOfPoints) {
+    int turn = usedPoints % 2 == 0 ? pIndex : qIndex;
+
+    pair<double, int> selected;
+    if (turn == pIndex) {
+      selected = *pItr;
+
+      while (used[selected.second]) {
+        pItr++;
+        selected = *pItr;
+      }
+
+      // selected.second is the point marked by this iteration.
+      p.insert(pointIndexing[selected.second]);
+      used[selected.second] = true;
+      pItr++;
+    } else {
+      selected = *qItr;
+
+      while (used[selected.second]) {
+        qItr++;
+        selected = *qItr;
+      }
+
+      q.insert(pointIndexing[selected.second]);
+      used[selected.second] = true;
+      qItr++;
+    }
+
+    usedPoints++;
+  }
+
+  return {p, q};
 }
 
 /**
  * Joins two points set first and second.
  */
-Points pointsUnion(Points* first, Points* second) {
+Points pointsUnion(Points first, Points second) {
   Points result;
   result.insert(first.begin(), first.end());
   result.insert(second.begin(), second.end());
@@ -50,7 +194,7 @@ Points pointsUnion(Points* first, Points* second) {
 }
 
 PointClusters nearestPointClusters(PointClusters input) {
-  ld minDistance = 1e18;
+  double minDistance = DBL_MAX;
   PointClusters candidateNearest = {NULL, NULL};
 
   /**
@@ -70,7 +214,7 @@ PointClusters nearestPointClusters(PointClusters input) {
 
       // As we are using <=, we return the very last pair of point clusters, if
       // there are more than one that satisfies the inequality.
-      ld dist = distance(medioid, otherMedioid);
+      double dist = distance(medioid, otherMedioid);
       if (dist <= minDistance) {
         minDistance = dist;
         candidateNearest = {points, otherPoints};
@@ -85,13 +229,13 @@ Points nearestNeighbour(Points objective, PointClusters clusters) {
   Point objectiveMedioid = computeMedioid(objective);
 
   Points candidateNearest = {};
-  ld minDistance = 1e18;
+  double minDistance = DBL_MAX;
 
   for (auto entry = clusters.begin(); entry != clusters.end(); entry++) {
     Points points = *entry;
     Point pointsMedioid = computeMedioid(points);
 
-    ld dist = distance(objectiveMedioid, pointsMedioid);
+    double dist = distance(objectiveMedioid, pointsMedioid);
     /**
      * <= is a relajation to choose the very last node that
      * verifies this condition. Dist must not be 0, in other
@@ -117,11 +261,11 @@ Point computeMedioid(Points input) {
   Point candidateMedioid = initial;
 
   // A very large number, because we want to minimize.
-  ld minTotalDistance = (ld)1e18;
+  double minTotalDistance = DBL_MAX;
 
   for (auto entry = input.begin(); entry != input.end(); entry++) {
     // Initialize the total distance for this point.
-    ld totalDistance = 0.0;
+    double totalDistance = 0.0;
     // The current point to be compared.
     Point point = *entry;
 
@@ -151,7 +295,7 @@ Point computeMedioid(Points input) {
  */
 Entry OutputLeafPage(Points input) {
   Point g = computeMedioid(input);
-  ld r = 0.0;
+  double r = 0.0;
   Node cluster;
 
   for (Point p : input) {
@@ -176,12 +320,12 @@ Entry OutputInternalPage(Node input) {
   for (Entry entry : input) C_in.insert(entry.point);
 
   Point G = computeMedioid(C_in);
-  ld R = 0.0;
+  double R = 0.0;
   Node cluster;
 
   for (Entry entry : input) {
     Point g = entry.point;
-    ld r = entry.coveringRadius;
+    double r = entry.coveringRadius;
     Entry* a = entry.children;
 
     cluster.insert(entry);
@@ -200,7 +344,7 @@ Entry* SSAlgorithm(Points input) {
   }
 
   // We have > B points. Then, we must do clustering to reduce size.
-  Nodes C_out = cluster(input);
+  PointClusters C_out = cluster(input);
   Node C = {};
 
   for (Points points : C_out) {
@@ -212,7 +356,7 @@ Entry* SSAlgorithm(Points input) {
    * search. Warning: Saving is global, and it doesn't reset in every while
    * iteration, this may be a problem.
    */
-  unordered_map<Point, Entry> pointToEntry;
+  map<Point, Entry> pointToEntry;
 
   while (C.size() > B) {
     Points C_in;
@@ -230,7 +374,7 @@ Entry* SSAlgorithm(Points input) {
 
     // Clustering again to reduce set size of C.
     C_out = cluster(C_in);
-    Node C_mra = {};
+    Nodes C_mra = {};
 
     for (Points points : C_out) {
       Node s;
@@ -259,7 +403,7 @@ PointClusters cluster(Points input) {
 
   for (Point p : input) {
     // We insert the singleton {p}.
-    C.insert(p);
+    C.insert({p});
   }
 
   while (C.size() > 1) {
@@ -302,10 +446,10 @@ PointClusters cluster(Points input) {
   if (secondUnion.size() <= B) {
     C_out.insert(secondUnion);
   } else {
-    PointClusters separated = splittingPolicy(secondUnion);  // TODO
+    PointClusters separated = splittingPolicy(secondUnion);
 
-    Points newFirst = *(separated.first());
-    Points newSecond = *(prev(separated.last()));
+    Points newFirst = *(separated.begin());
+    Points newSecond = *(prev(separated.end()));
 
     C_out.insert(newFirst);
     C_out.insert(newSecond);
