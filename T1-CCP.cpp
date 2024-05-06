@@ -204,16 +204,6 @@ Nodo *crear_MTree_CCP(const set<pair<double,double>> points){
             // 4.1 Quitamos pfj de F
             // 4.2 Por cada p ∈ Fj, le buscamos el sample pfl más cercano de F y lo añadimos a su conjunto Fl.
 
-            // for(const auto& par : samples){
-            //     pair<double,double> clave = par.first;
-            //     set<pair<double,double>> conjunto = par.second;
-            //     cout << "el conjunto mide " << conjunto.size() << endl;
-            //     if(conjunto.size() < b_min){
-            //         samples.erase(clave); // quitamos pfj de F
-            //         // para cada elemento que estaba en su conjunto, buscaremos su otro sample más cercano
-            //         samples = punto_mas_cercano(conjunto, samples);
-            //     }
-            // }
             auto it = samples.begin();
             while (it != samples.end()) {
                 pair<double,double> clave = it->first;
