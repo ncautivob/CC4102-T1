@@ -106,34 +106,6 @@ void busqueda_h(Nodo *nodo, const int h, set<Nodo*>& arboles) {
     }
 }
 
-/** Función que conecta los subarboles Tj a las hojas de Tsup, arreglando las alturas en el proceso*/
-void conectar_arboles(Nodo* nodo, map<pair<double,double>,Nodo*>& subarboles){
-    vector<Entry>& entries = nodo->entries;
-    int altura_max = 0;
-    if (entries[0].a==nullptr) { // encontramos una hoja
-        for(int j = 0; j<entries.size(); j++){
-            pair<double,double> punto_hoja = entries[j].p;
-            entries[j].a = subarboles[punto_hoja];
-            nodo->altura = 2;
-            
-        }
-
-    }
-    else { // seguimos buscando hojas
-        // Si el nodo no es una hoja, recorre recursivamente sus entradas
-        for (const auto& entry : entries) {
-            conectar_arboles(entry.a, subarboles);
-            int altura = ((entry.a)->altura)+1;
-            if (altura > altura_max){
-                altura_max = altura;
-            }
-        }
-        nodo->altura = altura_max;
-    }
-    cout << "la altura seteada fue " << nodo->altura << endl;
-    cout << "verificar que sea h+1" << endl;
-}
-
 
 double setear_radio_cobertor(Entry& entry){ // no seteará las hojas porque originalmente ya son 0.0
 
@@ -148,7 +120,9 @@ double setear_radio_cobertor(Entry& entry){ // no seteará las hojas porque orig
             max_radio = radio_cobertor_hijo + distancia;
         }
     }
+    
     entry.cr = max_radio;
+    cout << "radio seteado " << entry.cr << endl;
 
     // if(hijo == nullptr){ // hoja
     //     return 0;
@@ -160,6 +134,34 @@ double setear_radio_cobertor(Entry& entry){ // no seteará las hojas porque orig
     // entry.cr = sqrt(max_radio);
 
     return entry.cr;
+}
+
+/** Función que conecta los subarboles Tj a las hojas de Tsup, arreglando las alturas en el proceso*/
+void conectar_arboles(Nodo* nodo, map<pair<double,double>,Nodo*>& subarboles){
+    vector<Entry>& entries = nodo->entries;
+    int altura_max = 0;
+    if (entries[0].a==nullptr) { // encontramos una hoja
+        for(int j = 0; j<entries.size(); j++){
+            pair<double,double> punto_hoja = entries[j].p;
+            entries[j].a = subarboles[punto_hoja];
+            nodo->altura = 2;
+            setear_radio_cobertor(entries[j]);
+        }
+    }
+    else { // seguimos buscando hojas
+        // Si el nodo no es una hoja, recorre recursivamente sus entradas
+        for (auto& entry : entries) {
+            conectar_arboles(entry.a, subarboles);
+            int altura = ((entry.a)->altura)+1;
+            if (altura > altura_max){
+                altura_max = altura;
+            }
+            setear_radio_cobertor(entry);
+        }
+        nodo->altura = altura_max;
+    }
+    cout << "la altura seteada fue " << nodo->altura << endl;
+    cout << "verificar que sea h+1" << endl;
 }
 
 
@@ -353,8 +355,7 @@ Nodo *crear_MTree_CCP(const set<pair<double,double>> points){
         //Tsup->altura = altura_max + 1;
 
         for(Entry entrada: Tsup->entries){
-            setear_radio_cobertor(entrada);
-            cout << "el radio cobertor seteado fue " << entrada.cr << endl;
+            
         }
         return Tsup;
     }
@@ -397,17 +398,13 @@ void imprimirArbol(Nodo *arbol)
 }
 
 int main() {
-    set<pair<double, double>> random_pairs = crear_set(256);
-    for(pair<double,double> random_pair : random_pairs){
-        //cout << "Random pairs: (" << random_pair.first << ", " << random_pair.second << ")" << endl;
-    }
+    set<pair<double, double>> random_pairs = crear_set(pow(2,14));
     cout << "B es " << B << endl;
     Nodo *arbol = crear_MTree_CCP(random_pairs);
     //for(Entry entry : arbol->entries){
-    //    cout << "hola" << endl;
     //    cout << "entry: " << entry.p.first << " " << entry.p.second << endl;
     //}
-    //delete arbol;
+    delete arbol;
     
 
     return 0;
