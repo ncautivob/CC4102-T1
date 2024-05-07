@@ -94,4 +94,5 @@ set<pair<double,double>> search (Nodo *MTree, pair<double,double> q, double r, s
             // si no, se descarta
         }
     }
+    return resp;
 }
