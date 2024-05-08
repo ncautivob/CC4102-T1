@@ -69,10 +69,10 @@ double distancia_cuadrado(const Point& punto1, const Point& punto2){
 /** la siguiente función encuentra el punto más cercano dentro de las claves de un mapa,
  * y luego se agrega al conjunto asociado a dicho punto
 */
-void punto_mas_cercano(const set<pair<double, double>>& Points, map<pair<double, double>, set<pair<double, double>>>& mapa){
+void punto_mas_cercano(const set<Point>& points, map<Point, set<Point>>& mapa){
     cout << "se entró a esta parte wii " << endl;
     cout << "el mapa que se recibió tiene " << mapa.size() << "entradas " << endl;
-    for(const Point& punto: Points){
+    for(const Point& punto: points){
         // le asignamos su sample más cercano!
         double mas_cercano = numeric_limits<double>::max(); // el más grande de los doubles
         Point punto_mas_cercano = make_pair(0.0, 0.0);
@@ -126,15 +126,6 @@ double setear_radio_cobertor(Entry& entry){ // no seteará las hojas porque orig
     entry.cr = max_radio;
     cout << "radio seteado " << entry.cr << endl;
 
-    // if(hijo == nullptr){ // hoja
-    //     return 0;
-    // }
-    // for (Entry entrada : hijo->entries){
-    //     max_radio = max(max_radio, setear_radio_cobertor(entrada) + (int)distancia_cuadrado(entry.p, entrada.p));
-    // }
-
-    // entry.cr = sqrt(max_radio);
-
     return entry.cr;
 }
 
@@ -170,13 +161,13 @@ void conectar_arboles(Nodo* nodo, map<Point,Nodo*>& subarboles){
 // Algoritmo CP:
 // Input: Un set de puntos P
 
-Nodo *crear_MTree_CCP(const set<Point> Points){
-    int n = Points.size();
+Nodo *crear_MTree_CCP(const set<Point> points){
+    int n = points.size();
     cout << "n es" << n << endl;
     if(n <= B){ // entran todos los puntos en un nodo
         Nodo *T = new Nodo; // se crea un árbol T (un nodo raíz con vector entries vacío)
         // se insertan todos los puntos a T
-        for (Point punto: Points){
+        for (Point punto: points){
             // crear entrada, inicialmente con radio cobertor y a nulos.
             Entry entrada;
             entrada.p = punto;
@@ -206,7 +197,7 @@ Nodo *crear_MTree_CCP(const set<Point> Points){
                 iteradores.insert(indices[i]); // recordar que los sets se ordenan de menor a mayor
             }
 
-            auto punto_escogido = Points.begin();
+            auto punto_escogido = points.begin();
             int actual = 0;
             for(int iterador : iteradores){
                 for(int i=actual; i<iterador; i++){ // avanza hasta el índice al que apunta it. comienza en actual pues va secuencialmente
@@ -220,7 +211,7 @@ Nodo *crear_MTree_CCP(const set<Point> Points){
             }
 
             // armar los k conjuntos:
-            punto_mas_cercano(Points, samples);
+            punto_mas_cercano(points, samples);
 
             // etapa de redistribución
 
@@ -340,25 +331,8 @@ Nodo *crear_MTree_CCP(const set<Point> Points){
         // Si el nodo es una hoja (no tiene entradas), imprime sus puntos
 
         conectar_arboles(Tsup, subarboles);
-
         // 12. Se setean los radios cobertores resultantes para cada entrada en este árbol.
-
         // 13. Se retorna T .
-        //Nodo *Tsup = new Nodo;
-        // int altura_max = 0;
-        // for(const auto& pair : subarboles){ // uno con los hijos
-        //     // (*Tsup).insertarEntry({pair.first, 0.0, pair.second});
-        //     int altura = pair.second->altura;
-        //     if(altura > altura_max){
-        //         altura_max = altura;
-        //     }
-        // }
-        // setear altura de acuerdo a la altura mayor de sus nodos hijos
-        //Tsup->altura = altura_max + 1;
-
-        for(Entry entrada: Tsup->entries){
-            
-        }
         return Tsup;
     }
 }
@@ -378,25 +352,6 @@ set<Point> crear_set(int n){
         ccp_set.insert(make_pair(first, second));
     }
     return ccp_set;
-}
-
-void imprimirArbol(Nodo *arbol)
-{
-    if (arbol != NULL)
-    {
-
-        cout << "Nodo: " << arbol->entries.size() << "\n";
-        for (int i = 0; i < arbol->entries.size(); i++) {
-            cout << "Entrada: " << arbol->entries[i].p.first << "" << arbol->entries[i].p.second << " con radio igual a " << arbol->entries[i].cr << " \n";
-        }
-
-        for (int i = 0; i < arbol->entries.size(); i++) {
-            imprimirArbol(arbol->entries[i].a);
-        }
-    }
-    else {
-        cout << "Llego a externo \n";
-    }
 }
 
 int main() {
