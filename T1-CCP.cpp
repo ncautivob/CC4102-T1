@@ -22,11 +22,13 @@
 
 using namespace std;
 
+using Point = pair<double, double>;
+
 int B_solo = 4096; // esto dividido en sizeof(entry) equivale al B real
 struct Nodo;
 
 typedef struct Entry { // una entrada de un nodo
-    pair<double, double> p;
+    Point p;
     double cr;
     Nodo *a;
 } Entry;
@@ -52,7 +54,7 @@ typedef struct Nodo {
     }
 } Nodo;
 
-double distancia_cuadrado(const pair<double,double>& punto1, const pair<double,double>& punto2){
+double distancia_cuadrado(const Point& punto1, const Point& punto2){
     // diferencia de coordenadas
     double dx = punto1.first - punto2.first;
     double dy = punto1.second - punto2.second;
@@ -67,16 +69,16 @@ double distancia_cuadrado(const pair<double,double>& punto1, const pair<double,d
 /** la siguiente función encuentra el punto más cercano dentro de las claves de un mapa,
  * y luego se agrega al conjunto asociado a dicho punto
 */
-void punto_mas_cercano(const set<pair<double, double>>& points, map<pair<double, double>, set<pair<double, double>>>& mapa){
+void punto_mas_cercano(const set<pair<double, double>>& Points, map<pair<double, double>, set<pair<double, double>>>& mapa){
     cout << "se entró a esta parte wii " << endl;
     cout << "el mapa que se recibió tiene " << mapa.size() << "entradas " << endl;
-    for(const pair<double,double>& punto: points){
+    for(const Point& punto: Points){
         // le asignamos su sample más cercano!
         double mas_cercano = numeric_limits<double>::max(); // el más grande de los doubles
-        pair<double,double> punto_mas_cercano = make_pair(0.0, 0.0);
+        Point punto_mas_cercano = make_pair(0.0, 0.0);
         // aplicamos algoritmo
         for(const auto& par : mapa){
-            const pair<double,double> clave = par.first;
+            const Point clave = par.first;
             double distancia = distancia_cuadrado(clave, punto);
             if(distancia < mas_cercano){
                 mas_cercano = distancia;
@@ -110,7 +112,7 @@ void busqueda_h(Nodo *nodo, const int h, set<Nodo*>& arboles) {
 double setear_radio_cobertor(Entry& entry){ // no seteará las hojas porque originalmente ya son 0.0
 
     double max_radio = 0;
-    pair<double,double> punto = entry.p;
+    Point punto = entry.p;
     Nodo *hijo = entry.a;
     // vamos a maximizar (radio_cobertor_hijo + distancia_al_hijo)
     for (Entry entrada : hijo->entries) { // revisamos las entradas del hijo
@@ -137,12 +139,12 @@ double setear_radio_cobertor(Entry& entry){ // no seteará las hojas porque orig
 }
 
 /** Función que conecta los subarboles Tj a las hojas de Tsup, arreglando las alturas en el proceso*/
-void conectar_arboles(Nodo* nodo, map<pair<double,double>,Nodo*>& subarboles){
+void conectar_arboles(Nodo* nodo, map<Point,Nodo*>& subarboles){
     vector<Entry>& entries = nodo->entries;
     int altura_max = 0;
     if (entries[0].a==nullptr) { // encontramos una hoja
         for(int j = 0; j<entries.size(); j++){
-            pair<double,double> punto_hoja = entries[j].p;
+            Point punto_hoja = entries[j].p;
             entries[j].a = subarboles[punto_hoja];
             nodo->altura = 2;
             setear_radio_cobertor(entries[j]);
@@ -168,13 +170,13 @@ void conectar_arboles(Nodo* nodo, map<pair<double,double>,Nodo*>& subarboles){
 // Algoritmo CP:
 // Input: Un set de puntos P
 
-Nodo *crear_MTree_CCP(const set<pair<double,double>> points){
-    int n = points.size();
+Nodo *crear_MTree_CCP(const set<Point> Points){
+    int n = Points.size();
     cout << "n es" << n << endl;
     if(n <= B){ // entran todos los puntos en un nodo
         Nodo *T = new Nodo; // se crea un árbol T (un nodo raíz con vector entries vacío)
         // se insertan todos los puntos a T
-        for (pair<double,double> punto: points){
+        for (Point punto: Points){
             // crear entrada, inicialmente con radio cobertor y a nulos.
             Entry entrada;
             entrada.p = punto;
@@ -188,9 +190,9 @@ Nodo *crear_MTree_CCP(const set<pair<double,double>> points){
     else{
         int k = int(ceil(min(double(B), double(n)/B))); // debe ser el techo, tal que no llegue a 1!
         cout << "k es" << k << endl;
-        map<pair<double,double>, set<pair<double,double>>> samples;
+        map<Point, set<Point>> samples;
         do{
-            samples = map<pair<double,double>, set<pair<double,double>>>();
+            samples = map<Point, set<Point>>();
             vector<int> indices(n); // un vector de tamaño n
             for(int i = 0; i < n; ++i){
                 indices[i] = i; // agregamos los números del 0 al n-1
@@ -204,7 +206,7 @@ Nodo *crear_MTree_CCP(const set<pair<double,double>> points){
                 iteradores.insert(indices[i]); // recordar que los sets se ordenan de menor a mayor
             }
 
-            auto punto_escogido = points.begin();
+            auto punto_escogido = Points.begin();
             int actual = 0;
             for(int iterador : iteradores){
                 for(int i=actual; i<iterador; i++){ // avanza hasta el índice al que apunta it. comienza en actual pues va secuencialmente
@@ -213,19 +215,19 @@ Nodo *crear_MTree_CCP(const set<pair<double,double>> points){
                 }
                 // se llegó al punto del iterador! se agrega a samples con un un conjunto vacío
                 cout << (*punto_escogido).first << " " << (*punto_escogido).second << endl;
-                samples[*punto_escogido] = set<pair<double,double>>();
+                samples[*punto_escogido] = set<Point>();
                 cout << "verificar size de samples" << samples.size() << endl;
             }
 
             // armar los k conjuntos:
-            punto_mas_cercano(points, samples);
+            punto_mas_cercano(Points, samples);
 
             // etapa de redistribución
 
             auto it = samples.begin();
             while (it != samples.end()) {
-                pair<double,double> clave = it->first;
-                set<pair<double,double>>& conjunto = it->second;
+                Point clave = it->first;
+                set<Point>& conjunto = it->second;
                 cout << "el conjunto mide " << conjunto.size() << endl;
                 if (conjunto.size() < b_min) {
                     set<pair<double, double>> conjunto_copia = conjunto; // hacer una copia, espero esto funcione :c
@@ -244,7 +246,7 @@ Nodo *crear_MTree_CCP(const set<pair<double,double>> points){
         // 6. Se realiza recursivamente el algoritmo CP en cada Fj, obteniendo el árbol Tj
 
         cout << " en efecto samples tiene tamaño " << samples.size() << endl;
-        map<pair<double,double>, Nodo*>  subarboles;
+        map<Point, Nodo*>  subarboles;
         for(const auto& par : samples){
             Nodo *sub_arbol = crear_MTree_CCP(par.second);
             // cada llamada devuelve un nodo (raíz de árbol). luego, tendremos varios árboles Tj.
@@ -290,11 +292,11 @@ Nodo *crear_MTree_CCP(const set<pair<double,double>> points){
             cout << "y los subarboles tienen un conj de tamaño" << (subarboles[par_T_j.first]->entries).size() << endl;
         }
         
-        set<pair<double,double>> claves_a_eliminar;
-        set<pair<double,double>> keys; // las llaves de F (finalmente, F)
+        set<Point> claves_a_eliminar;
+        set<Point> keys; // las llaves de F (finalmente, F)
 
         for(const auto& par_T_j : subarboles){
-            pair<double,double> clave = par_T_j.first;
+            Point clave = par_T_j.first;
             Nodo *T_j = par_T_j.second;
             if(T_j->altura== h){
                 T2.insert(T_j);
@@ -312,7 +314,7 @@ Nodo *crear_MTree_CCP(const set<pair<double,double>> points){
 
                     // 9.3 Se insertan los puntos raíz de T′1, . . . , T′ p: p′ f1, . . . , p′ fp en F
                     for (Entry entrada_h : subtree_h->entries){
-                        pair<double,double> clave_h = entrada_h.p;
+                        Point clave_h = entrada_h.p;
                         subarboles[clave_h] = entrada_h.a;
                         keys.insert(clave_h);
                     }
@@ -321,7 +323,7 @@ Nodo *crear_MTree_CCP(const set<pair<double,double>> points){
                 claves_a_eliminar.insert(clave);
             }
         }
-        for(pair<double,double> clave : claves_a_eliminar){
+        for(Point clave : claves_a_eliminar){
             cout << "eliminando clave" << endl;
             subarboles.erase(clave);
         }
@@ -361,8 +363,8 @@ Nodo *crear_MTree_CCP(const set<pair<double,double>> points){
     }
 }
 
-set<pair<double,double>> crear_set(int n){
-    set<pair<double,double>> ccp_set;
+set<Point> crear_set(int n){
+    set<Point> ccp_set;
     for(int j=0; j<n; j++){
         random_device rd;
         mt19937 gen(rd());
