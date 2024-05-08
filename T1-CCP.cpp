@@ -6,34 +6,47 @@
  * Método: Ciaccia Patella
 */
 
+/** En primer lugar, se incluyen todas las librerías necesarias para la implementación */
 #include <cstddef>
 #include <iostream>
 #include <set>
 #include <vector>
-#include <algorithm> //shuffle
+#include <algorithm>
 #include <cstdlib>
 #include <limits>
 #include <cmath>
 #include <utility>
 #include <map>
-
 #include <random>
 #include <chrono>
 
-using namespace std;
+using namespace std; // Se setea esto para no tener que escribir 'std::' repetitivamente.
+using Point = pair<double, double>; // Esto es para simplificar la notación.
+struct Nodo; // Y esto es para poder utilizarlo en las estructuras a definir.
 
-using Point = pair<double, double>;
+/** Por enunciado se mencionan algunas características de los nodos.
+ * En primer lugar, cada nodo tendrá como capacidad B entradas en disco
+ * Luego, un nodo acepta hasta B / sizeof(entry) entradas.
+ * Para la etapa de experimentación se definirá B = 4096 Bytes.
+ * 
+*/
 
-int B_solo = 4096; // esto dividido en sizeof(entry) equivale al B real
-struct Nodo;
+int B_bytes = 4096; // Esto dividido en sizeof(entry) equivale al máximo número de entradas de un nodo.
 
-typedef struct Entry { // una entrada de un nodo
+/** Definimos la estructura 'Entry' como una de las entradas de un nodo
+ * p: un punto
+ * cr: radio cobertor (covering radius) de este subárbol.
+ * Esto es la máxima distancia que hay entre p y cualquier punto del subárbol relacionado a su entrada.
+ * 
+*/
+typedef struct Entry {
     Point p;
     double cr;
+    //double cr2 = 0.0;
     Nodo *a;
 } Entry;
 
-int B = B_solo / sizeof(Entry); // (128)
+int B = B_bytes / sizeof(Entry); // (128)
 int b_min = 0.5 * B; // capacidad mínima (64)
 
 // establecer semilla
@@ -70,8 +83,8 @@ double distancia_cuadrado(const Point& punto1, const Point& punto2){
  * y luego se agrega al conjunto asociado a dicho punto
 */
 void punto_mas_cercano(const set<Point>& points, map<Point, set<Point>>& mapa){
-    cout << "se entró a esta parte wii " << endl;
-    cout << "el mapa que se recibió tiene " << mapa.size() << "entradas " << endl;
+    //cout << "se entró a esta parte wii " << endl;
+    //cout << "el mapa que se recibió tiene " << mapa.size() << "entradas " << endl;
     for(const Point& punto: points){
         // le asignamos su sample más cercano!
         double mas_cercano = numeric_limits<double>::max(); // el más grande de los doubles
@@ -88,9 +101,9 @@ void punto_mas_cercano(const set<Point>& points, map<Point, set<Point>>& mapa){
         // termina algoritmo
         mapa[punto_mas_cercano].insert(punto);
     };
-    for(const auto& par : mapa){
-        cout << "verifiquemos redistribucion" << par.second.size() << endl;
-    }
+    //for(const auto& par : mapa){
+        //cout << "verifiquemos redistribucion" << par.second.size() << endl;
+    //}
 }
 
 /** función que, dada una raíz de un árbol, encuentra los subárboles de altura h que estén en él 
@@ -124,9 +137,41 @@ double setear_radio_cobertor(Entry& entry){ // no seteará las hojas porque orig
     }
     
     entry.cr = max_radio;
-    cout << "radio seteado " << entry.cr << endl;
+    //cout << "radio seteado " << entry.cr << endl;
 
     return entry.cr;
+}
+
+double radio_2(Entry& entry, Point p){ // no seteará las hojas porque originalmente ya son 0.0
+
+    double max_radio = 0;
+    Nodo *hijo = entry.a;
+    vector<Entry> entradas = hijo->entries;
+    if(entradas[0].a == nullptr){ // hojas!
+        for (Entry entrada : hijo->entries) { // revisamos las hojas del subarbol
+            double distancia = sqrt(distancia_cuadrado(p, entrada.p));
+            if (distancia>max_radio){
+                max_radio = distancia;
+            }
+        }
+    }
+    else {
+        // buscamos hasta encontrar las hojas de los subarboles
+        for (Entry entrada : hijo->entries) { // revisamos las hojas del subarbol
+            Nodo *subarbol = entrada.a;
+            for (Entry entrada_sub : subarbol->entries){
+                double max_local = radio_2(entrada_sub, p);
+                if (max_local>max_radio){
+                    max_radio = max_local;
+                }
+            }
+        }
+
+    }
+    
+    //entry.cr2 = max_radio;
+
+    return max_radio;
 }
 
 /** Función que conecta los subarboles Tj a las hojas de Tsup, arreglando las alturas en el proceso*/
@@ -139,6 +184,9 @@ void conectar_arboles(Nodo* nodo, map<Point,Nodo*>& subarboles){
             entries[j].a = subarboles[punto_hoja];
             nodo->altura = 2;
             setear_radio_cobertor(entries[j]);
+            //cout << "el radio seteado fue" << entries[j].cr << endl;
+            //radio_2(entries[j], entries[j].p);
+            //cout << "el 2do radio seteado fue" << entries[j].cr2 << endl;
         }
     }
     else { // seguimos buscando hojas
@@ -150,11 +198,13 @@ void conectar_arboles(Nodo* nodo, map<Point,Nodo*>& subarboles){
                 altura_max = altura;
             }
             setear_radio_cobertor(entry);
+            //cout << "el radio seteado fue" << entry.cr << endl;
+            //radio_2(entry, entry.p);
+            //cout << "el 2do radio seteado fue" << entry.cr2 << endl;
         }
         nodo->altura = altura_max;
     }
-    cout << "la altura seteada fue " << nodo->altura << endl;
-    cout << "verificar que sea h+1" << endl;
+    //cout << "la altura seteada fue " << nodo->altura << endl;
 }
 
 
@@ -163,7 +213,7 @@ void conectar_arboles(Nodo* nodo, map<Point,Nodo*>& subarboles){
 
 Nodo *crear_MTree_CCP(const set<Point> points){
     int n = points.size();
-    cout << "n es" << n << endl;
+    //cout << "n es" << n << endl;
     if(n <= B){ // entran todos los puntos en un nodo
         Nodo *T = new Nodo; // se crea un árbol T (un nodo raíz con vector entries vacío)
         // se insertan todos los puntos a T
@@ -180,10 +230,11 @@ Nodo *crear_MTree_CCP(const set<Point> points){
     }
     else{
         int k = int(ceil(min(double(B), double(n)/B))); // debe ser el techo, tal que no llegue a 1!
-        cout << "k es" << k << endl;
+        //cout << "k es" << k << endl;
         map<Point, set<Point>> samples;
         do{
             samples = map<Point, set<Point>>();
+            //cout << "verificar que samples está vacío " << samples.size() << endl;
             vector<int> indices(n); // un vector de tamaño n
             for(int i = 0; i < n; ++i){
                 indices[i] = i; // agregamos los números del 0 al n-1
@@ -205,9 +256,9 @@ Nodo *crear_MTree_CCP(const set<Point> points){
                     punto_escogido++;
                 }
                 // se llegó al punto del iterador! se agrega a samples con un un conjunto vacío
-                cout << (*punto_escogido).first << " " << (*punto_escogido).second << endl;
+                //cout << (*punto_escogido).first << " " << (*punto_escogido).second << endl;
                 samples[*punto_escogido] = set<Point>();
-                cout << "verificar size de samples" << samples.size() << endl;
+                //cout << "verificar size de samples" << samples.size() << endl;
             }
 
             // armar los k conjuntos:
@@ -217,60 +268,60 @@ Nodo *crear_MTree_CCP(const set<Point> points){
 
             auto it = samples.begin();
             while (it != samples.end()) {
-                Point clave = it->first;
+                //Point clave = it->first;
                 set<Point>& conjunto = it->second;
-                cout << "el conjunto mide " << conjunto.size() << endl;
+                //cout << "el conjunto mide " << conjunto.size() << endl;
                 if (conjunto.size() < b_min) {
                     set<pair<double, double>> conjunto_copia = conjunto; // hacer una copia, espero esto funcione :c
                     it = samples.erase(it); // quitamos pfj de F
                     // redistribuimos
                     punto_mas_cercano(conjunto_copia, samples);
-                    cout << "deberia haberse redistribuido " << endl;
+                    //cout << "deberia haberse redistribuido " << endl;
                 } else {
                     ++it; // avanzamos al sgte elemento
                 }
             }
-        } while (samples.size() < 1);
+        } while (samples.size() <= 1);
 
         int h = numeric_limits<int>::max(); // la altura mínima de los árboles Tj.
 
         // 6. Se realiza recursivamente el algoritmo CP en cada Fj, obteniendo el árbol Tj
 
-        cout << " en efecto samples tiene tamaño " << samples.size() << endl;
+        //cout << " en efecto samples tiene tamaño " << samples.size() << endl;
         map<Point, Nodo*>  subarboles;
         for(const auto& par : samples){
             Nodo *sub_arbol = crear_MTree_CCP(par.second);
             // cada llamada devuelve un nodo (raíz de árbol). luego, tendremos varios árboles Tj.
             vector<Entry> entradas = sub_arbol->entries;
-            cout << "este arbol tiene " << entradas.size() << " entradas "<< endl;
+            //cout << "este arbol tiene " << entradas.size() << " entradas "<< endl;
             if(entradas.size() >= b_min){
-                cout << "todo ok con este arbol "<< endl;
+                //cout << "todo ok con este arbol "<< endl;
                 subarboles[par.first] = sub_arbol;
                 if(sub_arbol->altura < h){
                     h = sub_arbol->altura;
                 }
             }
             else{
-                cout << "rip, proceso sgte" << endl;
+                //cout << "rip, proceso sgte" << endl;
                 // se quita la raiz (en este caso, no se agrega a 'subarboles') y se trabaja con sus subárboles
                 // para acceder a los subárboles, encontraremos los nodos a los que referencia cada entry
                 // luego, estos nodos los agregaremos al set de subarboles
                 for(auto entrada = entradas.begin(); entrada != entradas.end(); entrada++){
                     Nodo *sub_subarbol = entrada->a;
                     subarboles[entrada->p] = sub_subarbol;
-                    cout << "la altura de este subarbol es" << sub_subarbol->altura << endl;
+                    //cout << "la altura de este subarbol es" << sub_subarbol->altura << endl;
                     if(sub_subarbol->altura < h){
                         h = sub_subarbol->altura;
                     }
                 }
-                cout << "verifiquemos ingreso " << subarboles.size() << endl;
-                for(const auto& par_T_j : subarboles){
-                    cout << "donde los puntos del subarbol son" << par_T_j.second->entries.size() << endl;
-                }
+                //cout << "verifiquemos ingreso " << subarboles.size() << endl;
+                //for(const auto& par_T_j : subarboles){
+                    //cout << "donde los puntos del subarbol son" << par_T_j.second->entries.size() << endl;
+                //}
                 
             }
         }
-        cout << "la altura minima encontrada fue " << h << endl;
+        //cout << "la altura minima encontrada fue " << h << endl;
 
         // 8. Etapa de balanceamiento: Se define h como la altura mínima de los árboles Tj.
         // Se define T' (T2) inicialmente como un conjunto vacío.
@@ -278,10 +329,10 @@ Nodo *crear_MTree_CCP(const set<Point> points){
         set<Nodo*> T2 = set<Nodo*>();
 
         // 9. Por cada Tj , si su altura es igual a h, se añade a T′.
-        cout << "subarboles tiene " << subarboles.size() << "subarboles" << endl;
-        for(const auto& par_T_j : subarboles){
-            cout << "y los subarboles tienen un conj de tamaño" << (subarboles[par_T_j.first]->entries).size() << endl;
-        }
+        //cout << "subarboles tiene " << subarboles.size() << "subarboles" << endl;
+        //for(const auto& par_T_j : subarboles){
+            //cout << "y los subarboles tienen un conj de tamaño" << (subarboles[par_T_j.first]->entries).size() << endl;
+        //}
         
         set<Point> claves_a_eliminar;
         set<Point> keys; // las llaves de F (finalmente, F)
@@ -292,14 +343,14 @@ Nodo *crear_MTree_CCP(const set<Point> points){
             if(T_j->altura== h){
                 T2.insert(T_j);
                 keys.insert(clave);
-                cout << "T_j insertado" << endl;
+                //cout << "T_j insertado" << endl;
             }
             else{
                 // 9.2 Se hace una búsqueda exhaustiva en Tj de todos los subárboles de altura igual a h.
                 // Se insertan estos árboles a T′
                 set<Nodo*> empty_set;
                 busqueda_h(T_j, h, empty_set); // funcion que busca y retorna un set con los subárboles de altura h que tiene T_j
-                cout << "empty_set logró encontrar " << empty_set.size() << "arboles de altura h" << endl;
+                //cout << "empty_set logró encontrar " << empty_set.size() << "arboles de altura h" << endl;
                 for (Nodo *subtree_h : empty_set) {
                     T2.insert(subtree_h);
 
@@ -315,12 +366,12 @@ Nodo *crear_MTree_CCP(const set<Point> points){
             }
         }
         for(Point clave : claves_a_eliminar){
-            cout << "eliminando clave" << endl;
+            //cout << "eliminando clave" << endl;
             subarboles.erase(clave);
         }
 
         // 10. Se define Tsup como el resultado de la llamada al algoritmo CP aplicado a F.
-
+        //cout << "el numero de keys es " << keys.size() << endl;
         Nodo *Tsup = crear_MTree_CCP(keys);
 
         // 11. Se une cada Tj ∈ T′ a su hoja en Tsup correspondiente al punto pfj ∈ F, obteniendo un nuevo árbol T.
@@ -355,8 +406,8 @@ set<Point> crear_set(int n){
 }
 
 int main() {
-    set<pair<double, double>> random_pairs = crear_set(pow(2,14));
-    cout << "B es " << B << endl;
+    set<pair<double, double>> random_pairs = crear_set(pow(2,20));
+    //cout << "B es " << B << endl;
     Nodo *arbol = crear_MTree_CCP(random_pairs);
     //for(Entry entry : arbol->entries){
     //    cout << "entry: " << entry.p.first << " " << entry.p.second << endl;
