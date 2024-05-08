@@ -20,6 +20,7 @@ Search Method
 #include <chrono>
 
 using namespace std;
+using Point = pair<double, double>;
 
 int B_solo = 4096;
 struct Nodo;
@@ -47,7 +48,7 @@ typedef struct Nodo {
     }
 } Nodo;
 
-double distancia_cuadrado(const pair<double,double>& punto1, const pair<double,double>& punto2){
+double distancia_cuadrado(const Point& punto1, const Point& punto2){
     // diferencia de coordenadas
     double dx = punto1.first - punto2.first;
     double dy = punto1.second - punto2.second;
@@ -69,14 +70,14 @@ double distancia_cuadrado(const pair<double,double>& punto1, const pair<double,d
 // Si es así, se busca en su hijo a posibles respuestas. Si no se cumple esa desigualdad, se descarta.
 
 
-set<pair<double,double>> search (Nodo *MTree, pair<double,double> q, double r, set<pair<double,double>>& resp){
+set<Point> search (Nodo *MTree, Point q, double r, set<Point>& resp){
     // El objetivo es encontrar todos los puntos de T que residen dentro de la bola (q,r)
     vector<Entry> entradas = MTree->entries;
     double r_square = pow(r,2); // dado que la función de distancia entrega la distancia al cuadrado
     if(entradas[0].a == nullptr){ // nodo es una hoja
         // se verifica para cada entrada si p cumple con dist(p, q) ≤ r
         for(Entry entrada : entradas){
-            pair<double,double> punto = entrada.p;
+            Point punto = entrada.p;
             if(distancia_cuadrado(punto,q) <= r_square){
                 resp.insert(punto);
             }
@@ -84,7 +85,7 @@ set<pair<double,double>> search (Nodo *MTree, pair<double,double> q, double r, s
     }
     else { // nodo es interno
         for(Entry entrada : entradas){
-            pair<double,double> punto = entrada.p;
+            Point punto = entrada.p;
             double cr = entrada.cr;
             double cr_square = pow(cr,2);
             if(distancia_cuadrado(punto,q) <= r_square + cr_square){
@@ -94,5 +95,4 @@ set<pair<double,double>> search (Nodo *MTree, pair<double,double> q, double r, s
             // si no, se descarta
         }
     }
-    return resp;
 }
