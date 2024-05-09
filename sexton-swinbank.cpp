@@ -1,5 +1,9 @@
 #include <bits/stdc++.h>
+
+#include <chrono>
+
 using namespace std;
+using namespace std::chrono;
 
 using Point = pair<double, double>;
 
@@ -24,8 +28,6 @@ using Nodes = vector<Node>;         // Set that have entries set as elements.
 using Points = set<Point>;          // Set of points.
 using PointClusters = set<Points>;  // Set that have points set as elements.
 
-Nodes globalNodes;  // Save the addresses (it doesn't harm anyone :-)).
-
 /**
  * Computes the squared euclidean distance between firstPoint and secondPoint.
  * As the square function strictly increases in the positive X-axis, then the
@@ -38,24 +40,23 @@ double distance(Point& firstPoint, Point& secondPoint) {
   return (double)delta_x * delta_x + delta_y * delta_y;
 }
 
-Entries getNodeEntries(Node node) { return node.entries; }
-
 /**
  * Uses the MinMax split policy to separate a cluster into two.
  */
 PointClusters splittingPolicy(Points input) {
+  int numberOfPoints = (int)input.size();
+
   vector<Point> pointIndexing;
   // distances[i] = (d, j), where d is distance(i, j).
-  vector<set<pair<double, int>>> distances;
+  vector<set<pair<double, int>>> distances(numberOfPoints);
   // Marks if the point was already used or not.
-  vector<bool> used(input.size(), false);
+  vector<bool> used(numberOfPoints, false);
 
   // Point mapping to index
   for (Point point : input) {
     pointIndexing.push_back(point);
   }
 
-  int numberOfPoints = (int)pointIndexing.size();
   // binom(n, 2) because distance is symmetric.
   for (int i = 0; i < numberOfPoints; i++) {
     Point first = pointIndexing[i];
@@ -311,13 +312,13 @@ Points nearestNeighbour(Points objective, PointClusters clusters) {
 Entry OutputLeafPage(Points input) {
   Point g = computeMedioid(input);
   double r = 0.0;
-  Node* cluster = (Node*)malloc(sizeof(Node));
+  Node* cluster = new Node;
 
   for (Point p : input) {
     // 0.0 as NULL in double entry gives a warning.
     Entry newEntry = {p, 0.0, nullptr};
 
-    getNodeEntries(*cluster).push_back(newEntry);
+    cluster->entries.push_back(newEntry);
     // Remember that distance(., .) returns the squared euclidean distance.
     r = max(r, sqrt(distance(g, p)));
   }
@@ -333,17 +334,19 @@ Entry OutputLeafPage(Points input) {
 Entry OutputInternalPage(Node input) {
   Points C_in;
   // We add the points in the input node to C_in.
-  for (Entry entry : getNodeEntries(input)) C_in.insert(entry.point);
+  for (Entry entry : input.entries) {
+    C_in.insert(entry.point);
+  }
 
   Point G = computeMedioid(C_in);
   double R = 0.0;
-  Node* cluster = (Node*)malloc(sizeof(Node));
+  Node* cluster = new Node;
 
-  for (Entry entry : getNodeEntries(input)) {
+  for (Entry entry : input.entries) {
     Point g = entry.point;
     double r = entry.coveringRadius;
 
-    getNodeEntries(*cluster).push_back(entry);
+    (*cluster).entries.push_back(entry);
     // Remember that distance(., .) returns the squared euclidean distance.
     R = max(R, sqrt(distance(G, g)) + r);
   }
@@ -367,27 +370,24 @@ PointClusters cluster(Points input) {
 
     // Nearest must only be two, as nearestNodes returns two nodes.
     // We retrieve this data to erase the iterators from the set.
-    auto first = nearest.begin();
-    auto second = prev(nearest.end());
+    auto first = C.find(*nearest.begin());
+    auto second = C.find(*prev(nearest.end()));
 
     // It must hold the inequality |firstNode| >= |secondNode|, by instructions.
-    if (sizeof(*first) <= sizeof(*second)) {
+    if ((*first).size() <= (*second).size()) {
       swap(first, second);
     }
 
-    Points firstPointSet = *first;
-    Points secondPointSet = *second;
-
-    Points firstUnion = pointsUnion(firstPointSet, secondPointSet);
+    Points firstUnion = pointsUnion(*first, *second);
 
     if (firstUnion.size() <= B) {
+      C.insert(firstUnion);
+
       C.erase(first);
       C.erase(second);
-
-      C.insert(firstUnion);
     } else {
+      C_out.insert(*first);
       C.erase(first);
-      C_out.insert(firstPointSet);
     }
   }
 
@@ -426,7 +426,7 @@ Node* SSAlgorithm(Points input) {
   Node C;
 
   for (Points points : C_out) {
-    getNodeEntries(C).push_back(OutputLeafPage(points));
+    C.entries.push_back(OutputLeafPage(points));
   }
 
   /**
@@ -436,11 +436,12 @@ Node* SSAlgorithm(Points input) {
    */
   map<Point, Entry> pointToEntry;
 
-  while (getNodeEntries(C).size() > B) {
+  while (C.entries.size() > B) {
     Points C_in;
+    cout << "XD\n";
 
     // We insert into C_in the points contained in C.
-    for (Entry entry : getNodeEntries(C)) {
+    for (Entry entry : C.entries) {
       Point point = entry.point;
       C_in.insert(point);
 
@@ -457,7 +458,7 @@ Node* SSAlgorithm(Points input) {
     for (Points points : C_out) {
       Node s;
       for (Point point : points) {
-        getNodeEntries(s).push_back(pointToEntry[point]);
+        s.entries.push_back(pointToEntry[point]);
       }
 
       C_mra.push_back(s);
@@ -465,7 +466,7 @@ Node* SSAlgorithm(Points input) {
 
     C = {};
     for (Node node : C_mra) {
-      getNodeEntries(C).push_back(OutputInternalPage(node));
+      C.entries.push_back(OutputInternalPage(node));
     }
   }
 
@@ -494,27 +495,33 @@ Points createSet(int n) {
  * Does a 1-by-1 deletion for each entry that propagates to its correspondent
  * recursive subtree roots.
  */
-void freeMem(Node* treeRoot) {
-  for (Entry entry : treeRoot->entries) {
+void freeMem(Node* root, Entry parent) {
+  if (root == nullptr) return;
+  parent.children = nullptr;
+
+  for (Entry entry : root->entries) {
     // If it is a leaf, we delete it directly.
-    if (entry.children == nullptr) {
-      free(treeRoot);
-      return;
+    if (entry.children != nullptr) {
+      freeMem(entry.children, entry);
     }
 
-    freeMem(entry.children);
-    free(treeRoot);
+    delete root;
+    cout << "llega acá" << '\n';
   }
 }
 
 int main() {
-  cout << 'a' << '\n';
-  Points testSet = createSet(256);
-  // Node* root = SSAlgorithm(testSet);
+  Points testSet = createSet(pow(2, 10));
 
-  PointClusters p = splittingPolicy(testSet);
-  // Frees the memory used in the M-Tree.
-  // freeMem(root);
+  auto start = high_resolution_clock::now();
+  Node* root = SSAlgorithm(testSet);
+
+  //  Frees the memory used in the M-Tree.
+  // freeMem(root, {{NULL, NULL}, NULL, nullptr});
+  auto stop = high_resolution_clock::now();
+
+  auto duration = duration_cast<seconds>(stop - start);
+  cout << duration.count() << '\n';
 
   return 0;
 }
