@@ -15,14 +15,16 @@ typedef struct {
 #define B 4096 / ENTRY_SIZE
 #define b 0.5 * B / ENTRY_SIZE
 
-using Entries = set<Entry>;
+using Entries = vector<Entry>;
 // Entries set.
 typedef struct Node {
   Entries entries;
 } Node;
-using Nodes = set<Node>;            // Set that have entries set as elements.
+using Nodes = vector<Node>;         // Set that have entries set as elements.
 using Points = set<Point>;          // Set of points.
 using PointClusters = set<Points>;  // Set that have points set as elements.
+
+Nodes globalNodes;  // Save the addresses (it doesn't harm anyone :-)).
 
 /**
  * Computes the squared euclidean distance between firstPoint and secondPoint.
@@ -49,12 +51,11 @@ PointClusters splittingPolicy(Points input) {
   vector<bool> used(input.size(), false);
 
   // Point mapping to index
-  for (auto entry = input.begin(); entry != input.end(); entry++) {
-    Point point = *entry;
+  for (Point point : input) {
     pointIndexing.push_back(point);
   }
 
-  int numberOfPoints = pointIndexing.size();
+  int numberOfPoints = (int)pointIndexing.size();
   // binom(n, 2) because distance is symmetric.
   for (int i = 0; i < numberOfPoints; i++) {
     Point first = pointIndexing[i];
@@ -68,7 +69,7 @@ PointClusters splittingPolicy(Points input) {
   }
 
   double minMaxRadius = DBL_MAX;
-  pair<int, int> candidateClusters = {NULL, NULL};
+  pair<int, int> candidateClusters = {-1, -1};
 
   for (int i = 0; i < numberOfPoints; i++) {
     for (int j = i + 1; j < numberOfPoints; j++) {
@@ -82,7 +83,8 @@ PointClusters splittingPolicy(Points input) {
       double secondRadius = 0.0;
 
       int usedPoints = 2;
-      while (usedPoints < numberOfPoints) {
+      while (usedPoints < numberOfPoints && firstItr != distances[i].end() &&
+             secondItr != distances[j].end()) {
         // If used points are even, then it's i's turn. Otherwise, it's j's.
         int turn = usedPoints % 2 == 0 ? i : j;
 
@@ -91,30 +93,34 @@ PointClusters splittingPolicy(Points input) {
           selected = *firstItr;
 
           // Move the iterator while the selected point was already used...
-          while (used[selected.second]) {
+          while (used[selected.second] && firstItr != distances[i].end()) {
             firstItr++;
             selected = *firstItr;
           }
 
-          // selected.first is the distance between i and the selected point.
-          firstRadius = max(firstRadius, selected.first);
-          /**
-           * Mark as used and move the iterator as we don't care about this
-           * element anymore.
-           */
-          used[selected.second] = true;
-          firstItr++;
+          if (firstItr != distances[i].end()) {
+            // selected.first is the distance between i and the selected point.
+            firstRadius = max(firstRadius, selected.first);
+            /**
+             * Mark as used and move the iterator as we don't care about this
+             * element anymore.
+             */
+            used[selected.second] = true;
+            firstItr++;
+          }
         } else {
           selected = *secondItr;
 
-          while (used[selected.second]) {
+          while (used[selected.second] && secondItr != distances[j].end()) {
             secondItr++;
             selected = *secondItr;
           }
 
-          secondRadius = max(secondRadius, selected.first);
-          used[selected.second] = true;
-          secondItr++;
+          if (secondItr != distances[j].end()) {
+            secondRadius = max(secondRadius, selected.first);
+            used[selected.second] = true;
+            secondItr++;
+          }
         }
 
         usedPoints++;
@@ -155,33 +161,38 @@ PointClusters splittingPolicy(Points input) {
   auto qItr = distances[qIndex].begin();
 
   int usedPoints = 2;
-  while (usedPoints < numberOfPoints) {
+  while (usedPoints < numberOfPoints && pItr != distances[pIndex].end() &&
+         qItr != distances[qIndex].end()) {
     int turn = usedPoints % 2 == 0 ? pIndex : qIndex;
 
     pair<double, int> selected;
     if (turn == pIndex) {
       selected = *pItr;
 
-      while (used[selected.second]) {
+      while (used[selected.second] && pItr != distances[pIndex].end()) {
         pItr++;
         selected = *pItr;
       }
 
-      // selected.second is the point marked by this iteration.
-      p.insert(pointIndexing[selected.second]);
-      used[selected.second] = true;
-      pItr++;
+      if (pItr != distances[pIndex].end()) {
+        // selected.second is the point marked by this iteration.
+        p.insert(pointIndexing[selected.second]);
+        used[selected.second] = true;
+        pItr++;
+      }
     } else {
       selected = *qItr;
 
-      while (used[selected.second]) {
+      while (used[selected.second] && qItr != distances[qIndex].end()) {
         qItr++;
         selected = *qItr;
       }
 
-      q.insert(pointIndexing[selected.second]);
-      used[selected.second] = true;
-      qItr++;
+      if (qItr != distances[qIndex].end()) {
+        q.insert(pointIndexing[selected.second]);
+        used[selected.second] = true;
+        qItr++;
+      }
     }
 
     usedPoints++;
@@ -214,24 +225,19 @@ Point computeMedioid(Points input) {
   // A very large number, because we want to minimize.
   double minTotalDistance = DBL_MAX;
 
-  for (auto entry = input.begin(); entry != input.end(); entry++) {
+  for (Point point : input) {
     // Initialize the total distance for this point.
     double totalDistance = 0.0;
-    // The current point to be compared.
-    Point point = *entry;
 
-    for (auto otherEntry = input.begin(); otherEntry != input.end();
-         otherEntry++) {
-      Point otherPoint = *otherEntry;
-
+    for (Point otherPoint : input) {
       totalDistance += distance(point, otherPoint);
     }
 
     /**
-     * <= is a relajation to choose the very last point that
-     * verifies this condition.
+     * As it's strictly less, it chooses the very first point
+     * that satisfies this condition.
      */
-    if (totalDistance <= minTotalDistance) {
+    if (totalDistance < minTotalDistance) {
       minTotalDistance = totalDistance;
       candidateMedioid = point;
     }
@@ -242,7 +248,7 @@ Point computeMedioid(Points input) {
 
 PointClusters nearestPointClusters(PointClusters input) {
   double minDistance = DBL_MAX;
-  PointClusters candidateNearest = {NULL, NULL};
+  PointClusters candidateNearest = {};
 
   /**
    * It is known that euclidean distance is symmetric, id. est., d(x, y) = d(y,
@@ -259,10 +265,12 @@ PointClusters nearestPointClusters(PointClusters input) {
       Points otherPoints = *otherEntry;
       Point otherMedioid = computeMedioid(otherPoints);
 
-      // As we are using <=, we return the very last pair of point clusters, if
-      // there are more than one that satisfies the inequality.
       double dist = distance(medioid, otherMedioid);
-      if (dist <= minDistance) {
+      /**
+       * As it's strictly less, it chooses the very first PointClusters
+       * that satisfies this condition.
+       */
+      if (dist < minDistance) {
         minDistance = dist;
         candidateNearest = {points, otherPoints};
       }
@@ -284,11 +292,10 @@ Points nearestNeighbour(Points objective, PointClusters clusters) {
 
     double dist = distance(objectiveMedioid, pointsMedioid);
     /**
-     * <= is a relajation to choose the very last node that
-     * verifies this condition. Dist must not be 0, in other
-     * case we are talking about the same node.
+     * As it's strictly less, it chooses the very first point set
+     * that satisfies this condition.
      */
-    if (dist <= minDistance && dist != 0) {
+    if (dist < minDistance && dist != 0) {
       minDistance = dist;
       candidateNearest = points;
     }
@@ -304,18 +311,18 @@ Points nearestNeighbour(Points objective, PointClusters clusters) {
 Entry OutputLeafPage(Points input) {
   Point g = computeMedioid(input);
   double r = 0.0;
-  Node cluster;
+  Node* cluster = (Node*)malloc(sizeof(Node));
 
   for (Point p : input) {
     // 0.0 as NULL in double entry gives a warning.
     Entry newEntry = {p, 0.0, nullptr};
 
-    getNodeEntries(cluster).insert(newEntry);
-    r = max(r, distance(g, p));
+    getNodeEntries(*cluster).push_back(newEntry);
+    // Remember that distance(., .) returns the squared euclidean distance.
+    r = max(r, sqrt(distance(g, p)));
   }
 
-  Node* a = &cluster;
-  return {g, r, a};
+  return {g, r, cluster};
 }
 
 /**
@@ -330,26 +337,25 @@ Entry OutputInternalPage(Node input) {
 
   Point G = computeMedioid(C_in);
   double R = 0.0;
-  Node cluster;
+  Node* cluster = (Node*)malloc(sizeof(Node));
 
   for (Entry entry : getNodeEntries(input)) {
     Point g = entry.point;
     double r = entry.coveringRadius;
-    Node* a = entry.children;
 
-    getNodeEntries(cluster).insert(entry);
-    R = max(R, distance(G, g) + r);
+    getNodeEntries(*cluster).push_back(entry);
+    // Remember that distance(., .) returns the squared euclidean distance.
+    R = max(R, sqrt(distance(G, g)) + r);
   }
 
-  Node* A = &cluster;
-  return {G, R, A};
+  return {G, R, cluster};
 }
 
 /**
  * Split a set of points into clusters of size at least b and size at most B.
  */
 PointClusters cluster(Points input) {
-  PointClusters C_out = {}, C = {};
+  PointClusters C_out, C;
 
   for (Point p : input) {
     // We insert the singleton {p}.
@@ -417,10 +423,10 @@ Node* SSAlgorithm(Points input) {
 
   // We have > B points. Then, we must do clustering to reduce size.
   PointClusters C_out = cluster(input);
-  Node C = {};
+  Node C;
 
   for (Points points : C_out) {
-    getNodeEntries(C).insert(OutputLeafPage(points));
+    getNodeEntries(C).push_back(OutputLeafPage(points));
   }
 
   /**
@@ -446,20 +452,20 @@ Node* SSAlgorithm(Points input) {
 
     // Clustering again to reduce set size of C.
     C_out = cluster(C_in);
-    Nodes C_mra = {};
+    Nodes C_mra;
 
     for (Points points : C_out) {
       Node s;
       for (Point point : points) {
-        getNodeEntries(s).insert(pointToEntry[point]);
+        getNodeEntries(s).push_back(pointToEntry[point]);
       }
 
-      C_mra.insert(s);
+      C_mra.push_back(s);
     }
 
     C = {};
     for (Node node : C_mra) {
-      getNodeEntries(C).insert(OutputInternalPage(node));
+      getNodeEntries(C).push_back(OutputInternalPage(node));
     }
   }
 
@@ -484,9 +490,24 @@ Points createSet(int n) {
   return result;
 }
 
+void freeMem(Node* treeRoot) {
+  for (Entry entry : treeRoot->entries) {
+    // We recursively free the memory in the children nodes.
+    freeMem(entry.children);
+    free(entry.children);
+  }
+
+  free(treeRoot);
+}
+
 int main() {
+  cout << 'a' << '\n';
   Points testSet = createSet(256);
-  Node* root = SSAlgorithm(testSet);
+  // Node* root = SSAlgorithm(testSet);
+
+  PointClusters p = splittingPolicy(testSet);
+  // Frees the memory used in the M-Tree.
+  // freeMem(root);
 
   return 0;
 }
