@@ -490,14 +490,21 @@ Points createSet(int n) {
   return result;
 }
 
+/**
+ * Does a 1-by-1 deletion for each entry that propagates to its correspondent
+ * recursive subtree roots.
+ */
 void freeMem(Node* treeRoot) {
   for (Entry entry : treeRoot->entries) {
-    // We recursively free the memory in the children nodes.
-    freeMem(entry.children);
-    free(entry.children);
-  }
+    // If it is a leaf, we delete it directly.
+    if (entry.children == nullptr) {
+      free(treeRoot);
+      return;
+    }
 
-  free(treeRoot);
+    freeMem(entry.children);
+    free(treeRoot);
+  }
 }
 
 int main() {
