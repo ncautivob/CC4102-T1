@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 /**
  * Sexton-Swinbank algorithm to construct M-trees.
  *
@@ -14,6 +15,11 @@
 #include <set>
 #include <utility>
 #include <vector>
+=======
+#include <bits/stdc++.h>
+
+#include <chrono>
+>>>>>>> e86d60e6af832a0e363b9723f7957287ada606b8
 
 using namespace std;
 using namespace std::chrono;
@@ -33,12 +39,22 @@ typedef struct {
 #define b 0.5 * B / ENTRY_SIZE
 
 using Entries = vector<Entry>;
+<<<<<<< HEAD
 typedef struct Node {
   Entries entries;
 } Node;
 using Nodes = vector<Node>;
 using Points = set<Point>;
 using PointClusters = set<Points>;
+=======
+// Entries set.
+typedef struct Node {
+  Entries entries;
+} Node;
+using Nodes = vector<Node>;         // Set that have entries set as elements.
+using Points = set<Point>;          // Set of points.
+using PointClusters = set<Points>;  // Set that have points set as elements.
+>>>>>>> e86d60e6af832a0e363b9723f7957287ada606b8
 
 /**
  * Computes the squared euclidean distance between firstPoint and secondPoint.
@@ -450,6 +466,10 @@ Node* SSAlgorithm(Points input) {
 
   while (C.entries.size() > B) {
     Points C_in;
+<<<<<<< HEAD
+=======
+    cout << "XD\n";
+>>>>>>> e86d60e6af832a0e363b9723f7957287ada606b8
 
     // We insert into C_in the points contained in C.
     for (Entry entry : C.entries) {
@@ -535,4 +555,8 @@ int main() {
   cout << duration.count() << '\n';
 
   return 0;
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> e86d60e6af832a0e363b9723f7957287ada606b8
