@@ -1,6 +1,6 @@
 # Tarea 1: Diseño y Análisis de Algoritmos
 
-## Construcción de M-Tree
+## Construcción y búsqueda en M-Tree usando métodos de Ciaccia-Patella y Sexton-Swinbank
 
 ## Integrantes: 
 - Valentina Alarcón Yañez 
