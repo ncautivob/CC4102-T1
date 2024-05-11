@@ -1,8 +1,10 @@
 # Tarea 1 Diseño y Análisis de Algoritmos
-### Integrantes: 
+
+## Integrantes: 
 Valentina Alarcón Yañez \
 Naomi Cautivo Bahamóndez \
 Máximo Flores Valenzuela \
+
 **Sección 2**\
 **Profesor:  Gonzalo Navarro B.**\
 **Profesor Auxiliar: Diego Salas.**
