@@ -1,4 +1,4 @@
-# Tarea 1: CC4102 - Diseño y Análisis de Algoritmos.
+# Tarea 1: CC4102 - Diseño y Análisis de Algoritmos
 
 ## Construcción y búsqueda en M-Tree usando métodos de Ciaccia-Patella y Sexton-Swinbank
 
@@ -8,8 +8,8 @@
 - Máximo Flores Valenzuela
 
 ## Profesores:
-**Profesor:  Gonzalo Navarro B.**\
-**Profesor Auxiliar: Diego Salas.**
+- Gonzalo Navarro B.
+- Benjamín Bustos
 
 ## Ejecución y Entregables.
 En el siguiente repositorio se entregan los siguientes archivos: 
