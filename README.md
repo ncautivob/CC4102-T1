@@ -8,8 +8,8 @@
 - Máximo Flores Valenzuela
 
 ## Profesores:
-- Gonzalo Navarro B.
 - Benjamín Bustos
+- Gonzalo Navarro Badino
 
 ## Ejecución y Entregables.
 En el siguiente repositorio se entregan los siguientes archivos: 
