@@ -1,13 +1,13 @@
-# Tarea 1: Diseño y Análisis de Algoritmos
+# Tarea 1: CC4102 - Diseño y Análisis de Algoritmos.
 
 ## Construcción y búsqueda en M-Tree usando métodos de Ciaccia-Patella y Sexton-Swinbank
 
-## Integrantes: 
+## Integrantes (Sección 2): 
 - Valentina Alarcón Yañez 
 - Naomi Cautivo Bahamóndez 
 - Máximo Flores Valenzuela
 
-**Sección 2**\
+## Profesores:
 **Profesor:  Gonzalo Navarro B.**\
 **Profesor Auxiliar: Diego Salas.**
 
