@@ -61,16 +61,6 @@ double distancia_cuadrado(const Point& punto1, const Point& punto2) {
   return distanciaCuadrada;
 }
 
-// La búsqueda tiene como input el M-Tree (T ) donde se buscará una query Q =
-// (q, r), donde q es un punto y r es el radio de búsqueda. Es decir, (q, r)
-// definen una bola. El objetivo es encontrar todos los puntos de T que residen
-// dentro de esta (ver Figura 1). Para realizar la búsqueda, se verifica desde
-// la raíz cada nodo hijo de esta: • Si el nodo es una hoja, se verifica para
-// cada entrada si p cumple con dist(p, q) ≤ r. Si es así, se agrega p a la
-// respuesta. • Si el nodo es interno (ver Figura 2), se verifica para cada
-// entrada (p, cr, a) si dist(p, q) ≤ cr + r. Si es así, se busca en su hijo a
-// posibles respuestas. Si no se cumple esa desigualdad, se descarta.
-
 set<Point> search(Nodo* MTree, Point q, double r, set<Point>& resp) {
   // El objetivo es encontrar todos los puntos de T que residen dentro de la
   // bola (q,r)
