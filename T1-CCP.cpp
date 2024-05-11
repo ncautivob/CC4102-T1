@@ -42,7 +42,6 @@ int B_bytes = 4096; // Esto dividido en sizeof(entry) equivale al máximo númer
 typedef struct Entry {
     Point p;
     double cr;
-    //double cr2 = 0.0;
     Nodo *a;
 } Entry;
 
@@ -74,11 +73,13 @@ void deleteTree(Nodo *nodo) {
         return;
     vector<Entry> entradas = nodo->entries;
     if(entradas[0].a==nullptr){ // Si las entradas del nodo son punteros nulos, lo ignoramos
+        delete nodo;
         return;
     }
     else{
         for(Entry entrada : entradas){ // Si no, detonamos la función recursivamente para el hijo
             deleteTree(entrada.a);
+            entrada.a = nullptr;
         }
     }
 
@@ -140,6 +141,10 @@ void busqueda_h(Nodo *nodo, const int h, map<Point, Nodo*>& arboles) {
             busqueda_h(hijo, h, arboles);
         }
     }
+    for(auto& entrada : entradas) {
+        entrada.a = nullptr;
+    }
+    delete nodo;
 }
 
 /** Función que seta el radio cobertor de una entrada */
@@ -160,40 +165,9 @@ double setear_radio_cobertor(Entry& entry){ // No seteará las hojas porque orig
         }
     }
     entry.cr = max_radio;
-    //cout << "radio seteado " << entry.cr << endl;
+
 
     return entry.cr;
-}
-
-double radio_2(Entry& entry, Point p){ // no seteará las hojas porque originalmente ya son 0.0
-
-    double max_radio = 0;
-    Nodo *hijo = entry.a;
-    vector<Entry> entradas = hijo->entries;
-    if(entradas[0].a == nullptr){ // hojas!
-        for (Entry entrada : hijo->entries) { // revisamos las hojas del subarbol
-            double distancia = sqrt(distancia_cuadrado(p, entrada.p));
-            if (distancia>max_radio){
-                max_radio = distancia;
-            }
-        }
-    }
-    else {
-        // buscamos hasta encontrar las hojas de los subarboles
-        for (Entry entrada : hijo->entries) { // revisamos las hojas del subarbol
-            Nodo *subarbol = entrada.a;
-            for (Entry entrada_sub : subarbol->entries){
-                double max_local = radio_2(entrada_sub, p);
-                if (max_local>max_radio){
-                    max_radio = max_local;
-                }
-            }
-        }
-
-    }
-    //entry.cr2 = max_radio;
-
-    return max_radio;
 }
 
 /** Función que conecta los subarboles Tj a las hojas de Tsup,
@@ -215,10 +189,6 @@ void conectar_arboles(Nodo* nodo, map<Point,Nodo*>& subarboles){
             Point punto_hoja = entries[j].p;
             entries[j].a = subarboles[punto_hoja];
             setear_radio_cobertor(entries[j]);
-
-            //cout << "el radio seteado fue" << entries[j].cr << endl;
-            //radio_2(entries[j], entries[j].p);
-            //cout << "el 2do radio seteado fue" << entries[j].cr2 << endl;
         }
     }
     else { // Si el nodo no es una hoja, recorre recursivamente sus entradas
@@ -229,10 +199,6 @@ void conectar_arboles(Nodo* nodo, map<Point,Nodo*>& subarboles){
                 altura_max = altura;
             }
             setear_radio_cobertor(entry);
-
-            //cout << "el radio seteado fue" << entry.cr << endl;
-            //radio_2(entry, entry.p);
-            //cout << "el 2do radio seteado fue" << entry.cr2 << endl;
         }
         nodo->altura = altura_max; // Se setea la altura para el nodo
     }
@@ -315,7 +281,7 @@ Nodo *crear_MTree_CCP(const set<Point> points){
         // Y de paso, se determinará la altura mínima de los subárboles (h).
         for(const auto& par : samples){
             Nodo *sub_arbol = crear_MTree_CCP(par.second);
-            vector<Entry> entradas = sub_arbol->entries;
+            vector<Entry>& entradas = sub_arbol->entries;
 
             if(entradas.size() >= b_min){ // Si el nodo tiene más de b_min entradas, todo ok
                 subarboles[par.first] = sub_arbol;
@@ -324,7 +290,7 @@ Nodo *crear_MTree_CCP(const set<Point> points){
                 }
             }
             else{
-                //cout << "rip, proceso sgte" << endl;
+                /** Tomaremos los subárboles del nodo */
                 for(auto entrada = entradas.begin(); entrada != entradas.end(); entrada++){
                     Nodo *sub_subarbol = entrada->a;
                     subarboles[entrada->p] = sub_subarbol;
@@ -332,8 +298,13 @@ Nodo *crear_MTree_CCP(const set<Point> points){
                     if(sub_subarbol->altura < h){
                         h = sub_subarbol->altura;
                     }
+                    entrada->a = nullptr;
                 }
-                
+                // for(auto& entrada : entradas) {
+                //     entrada.a = nullptr;
+                // }
+                // // Eliminar el nodo raíz
+                delete sub_arbol;
             }
         }
         //cout << "la altura minima encontrada fue " << h << endl;
@@ -388,7 +359,7 @@ set<Point> crear_set(int n){
     for(int j=0; j<n; j++){
         random_device rd;
         mt19937 gen(rd());
-        uniform_real_distribution<double> dis(-100.0, 100.0);
+        uniform_real_distribution<double> dis(0.0, 1.0);
 
         // Generate random double values
         double first = dis(gen);
@@ -401,12 +372,13 @@ set<Point> crear_set(int n){
 }
 
 int main() {
-    set<pair<double, double>> random_pairs = crear_set(pow(2,1));
+    set<pair<double, double>> random_pairs = crear_set(pow(2,22));
     //cout << "B es " << B << endl;
     Nodo *arbol = crear_MTree_CCP(random_pairs);
     for(Entry entry : arbol->entries){
         cout << "entry: " << entry.p.first << " " << entry.p.second << endl;
     }
+    cout << "y tiene " << arbol->entries.size() << "entradas" << endl;
     deleteTree(arbol);
     return 0;
 }
