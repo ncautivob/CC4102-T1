@@ -559,9 +559,46 @@ void search(Node* root, Point q, double r, vector<int>& v, int index) {
   }
 }
 
+Points parsePoints(int n) {
+  string line;
+
+  string fileName =
+      n == N_ITER ? "queries.txt" : "pow2" + to_string(n) + ".txt";
+  ifstream File("./input/" + fileName);
+
+  Points result;
+  if (File.is_open()) {
+    while (getline(File, line)) {
+      // Resets the index. The format is (x, y).
+      int i = 0;
+      string x, y;
+
+      while (line[i] != '(') i++;
+      i++;
+      while (line[i] != ',') {
+        x += line[i];
+        i++;
+      }
+
+      i += 2;
+      while (line[i] != ')') {
+        y += line[i];
+        i++;
+      }
+
+      result.insert({stod(x), stod(y)});
+    }
+    File.close();
+  }
+
+  return result;
+}
+
 int main() {
-  Points testSet = createSet(pow(2, 3));
-  Points testQueries = createSet(N_ITER);
+  // The argument is the power of 2, or N_ITER if query.
+  Points testSet = parsePoints(10);
+  Points testQueries = parsePoints(N_ITER);
+
   vector<Point> queryPoints;
   vector<pair<int, double>> response;
   vector<int> accesses(N_ITER);
@@ -570,7 +607,13 @@ int main() {
     queryPoints.push_back(point);
   }
 
+  auto start = high_resolution_clock::now();
   Node* root = SSAlgorithm(testSet);
+  auto stop = high_resolution_clock::now();
+  auto duration = duration_cast<seconds>(stop - start);
+
+  cout << "Construcción M-Tree (SS): " << duration.count() << " s\n";
+
   //  Frees the memory used in the M-Tree.
   // freeMem(root, {{NULL, NULL}, NULL, nullptr});
 
