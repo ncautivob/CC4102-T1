@@ -1,6 +1,6 @@
 # 📚 Tarea 1: CC4102 - Diseño y Análisis de Algoritmos
 
-Construcción y búsqueda en M-Tree usando métodos de Ciaccia-Patella y Sexton-Swinbank
+Construcción y búsqueda en M-Tree usando métodos de Ciaccia-Patella (CP) y Sexton-Swinbank (SS)
 
 ## 👤 Integrantes (Sección 2): 
 - Valentina Alarcón Yañez 
@@ -14,7 +14,7 @@ Construcción y búsqueda en M-Tree usando métodos de Ciaccia-Patella y Sexton-
 ## 💻 Ejecución y entregables
 En el siguiente repositorio se entregan los siguientes archivos. Todas las implementaciones fueron realizadas en C++:
 
-- 📁 $\texttt{/input/}$ - Contiene las entradas compartidas en formato `.txt` desde $2^{10}$ a $2^{25}$ datos.\
+- 📁 $\texttt{/input/}$ - Contiene las entradas compartidas en formato $\texttt{.txt}$ desde $2^{10}$ a $2^{15}$ datos para la ejecución de CP y SS.
 - `sexton-swinbank.cpp`: Método de construcción Sexton-Swinbank\
 - `T1-CCP.cpp`: Método de Construcción Ciaccia-Patella\
 - `Search.cpp`: Método de Búsqueda generalizado para ambos métodos de construcción.\
