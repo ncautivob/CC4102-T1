@@ -3,13 +3,13 @@
 Construcción y búsqueda en M-Tree usando métodos de Ciaccia-Patella (CP) y Sexton-Swinbank (SS)
 
 ## 👤 Integrantes (Sección 2): 
-- Valentina Alarcón Yañez ($\texttt{valentina.alarcon.y\@ug.uchile.cl}$).
-- Naomi Cautivo Bahamóndez ($\texttt{naomi.cautivo\@ug.uchile.cl}$).
-- Máximo Flores Valenzuela ($\texttt{mflores\@dcc.uchile.cl}$).
+- Valentina Alarcón Yañez (valentina.alarcon.y at ug.uchile.cl).
+- Naomi Cautivo Bahamóndez (naomi.cautivo at ug.uchile.cl).
+- Máximo Flores Valenzuela (mflores at dcc.uchile.cl).
 
 ## 👤 Profesores:
-- Benjamín Bustos ($\texttt{bebustos\@dcc.uchile.cl}$).
-- Gonzalo Navarro Badino ($\texttt{gnavarro\@dcc.uchile.cl}).
+- Benjamín Bustos (bebustos at dcc.uchile.cl}$).
+- Gonzalo Navarro Badino (gnavarro at dcc.uchile.cl).
 
 ## 💻 Ejecución y entregables
 En el siguiente repositorio se entregan los siguientes archivos. Todas las implementaciones fueron realizadas en C++:
