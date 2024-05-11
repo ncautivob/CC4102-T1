@@ -8,6 +8,7 @@
 
 #include <cfloat>
 #include <chrono>
+#include <fstream>
 #include <iostream>
 #include <map>
 #include <random>
@@ -31,6 +32,8 @@ typedef struct {
 #define ENTRY_SIZE sizeof(Entry)
 #define B 4096 / ENTRY_SIZE
 #define b 0.5 * B / ENTRY_SIZE
+#define N_ITER 100
+#define query_radius 0.02
 
 using Entries = vector<Entry>;
 typedef struct Node {
@@ -517,22 +520,75 @@ void freeMem(Node* root, Entry parent) {
     }
 
     delete root;
-    cout << "llega acá" << '\n';
+  }
+}
+
+/** The vector v has the accesses. */
+void search(Node* root, Point q, double r, vector<int>& v, int index) {
+  Entries entries = root->entries;
+  if (entries.size() == 0) return;
+
+  // Given that distance returns the squared euclidean distance.
+  double r_square = pow(r, 2);
+  // This is a external node, and else condition is internal.
+  if (entries[0].children == nullptr) {
+    v[index]++;
+    /**
+     * Verify for each entry if it satisfies (d(p, q))^2 <= r^2.
+     * This is possible because square function increases strictly in >= 0.
+     */
+    for (Entry entry : entries) {
+      Point p = entry.point;
+      if (distance(p, q) <= r_square) {
+        // ans.insert(p);
+      }
+    }
+  } else {
+    v[index]++;
+    for (Entry entry : entries) {
+      Point p = entry.point;
+      double cr = entry.coveringRadius;
+      double cr_square = pow(cr, 2);
+      double binom_square = r_square + cr_square + 2 * r * cr;
+
+      if (distance(p, q) <= binom_square) {
+        // Search recursively in childs
+        search(entry.children, q, r, v, index);
+      }
+    }
   }
 }
 
 int main() {
-  Points testSet = createSet(pow(2, 10));
+  Points testSet = createSet(pow(2, 3));
+  Points testQueries = createSet(N_ITER);
+  vector<Point> queryPoints;
+  vector<pair<int, double>> response;
+  vector<int> accesses(N_ITER);
 
-  auto start = high_resolution_clock::now();
+  for (Point point : testQueries) {
+    queryPoints.push_back(point);
+  }
+
   Node* root = SSAlgorithm(testSet);
-
   //  Frees the memory used in the M-Tree.
   // freeMem(root, {{NULL, NULL}, NULL, nullptr});
-  auto stop = high_resolution_clock::now();
 
-  auto duration = duration_cast<seconds>(stop - start);
-  cout << duration.count() << '\n';
+  for (int i = 0; i < N_ITER; i++) {
+    Point q = queryPoints[i];
+
+    auto start = high_resolution_clock::now();
+    search(root, q, query_radius, accesses, i);
+    auto stop = high_resolution_clock::now();
+
+    auto duration = duration_cast<nanoseconds>(stop - start);
+    response.push_back({accesses[i], duration.count()});
+  }
+
+  for (int i = 0; i < N_ITER; i++) {
+    cout << i + 1 << " (accesos, tiempo): (" << response[i].first << ", "
+         << response[i].second << " ns)\n";
+  }
 
   return 0;
 }
