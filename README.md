@@ -8,7 +8,7 @@ Construcción y búsqueda en M-Tree usando métodos de Ciaccia-Patella (CP) y Se
 - Máximo Flores Valenzuela (mflores at dcc.uchile.cl).
 
 ## 👤 Profesores:
-- Benjamín Bustos (bebustos at dcc.uchile.cl}$).
+- Benjamín Bustos (bebustos at dcc.uchile.cl).
 - Gonzalo Navarro Badino (gnavarro at dcc.uchile.cl).
 
 ## 💻 Ejecución y entregables
