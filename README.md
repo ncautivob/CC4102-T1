@@ -20,7 +20,7 @@ En el siguiente repositorio se entregan los siguientes archivos. Todas las imple
 - 📄 $\texttt{search.cpp}$ - Método de búsqueda generalizado para ambos métodos de construcción.
 - 📄 $\texttt{informe.pdf}$ - Informe de la tarea en formato PDF.
 - 📄 $\texttt{tarea-1.cpp}$ - Archivo principal de la tarea.
-- 
+  
 ### Importante a considerar en ejecución.
 - Acá van cosas que deberia considerar un ayudante al corregir nuestras implementaciones, por verse
 - Otra cosa a notar.
