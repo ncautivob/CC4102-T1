@@ -1,4 +1,6 @@
-# Tarea 1 Diseño y Análisis de Algoritmos
+# Tarea 1: Diseño y Análisis de Algoritmos
+
+## Construcción de M-Tree
 
 ## Integrantes: 
 - Valentina Alarcón Yañez 
