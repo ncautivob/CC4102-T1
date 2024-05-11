@@ -8,6 +8,8 @@
     "unordered_set": "cpp",
     "vector": "cpp",
     "forward_list": "cpp",
-    "type_traits": "cpp"
+    "type_traits": "cpp",
+    "random": "cpp",
+    "chrono": "cpp"
   }
 }
