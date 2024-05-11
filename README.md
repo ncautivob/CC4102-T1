@@ -1,6 +1,6 @@
 # 📚 Tarea 1: CC4102 - Diseño y Análisis de Algoritmos
 
-## Construcción y búsqueda en M-Tree usando métodos de Ciaccia-Patella y Sexton-Swinbank
+Construcción y búsqueda en M-Tree usando métodos de Ciaccia-Patella y Sexton-Swinbank
 
 ## 👤 Integrantes (Sección 2): 
 - Valentina Alarcón Yañez 
