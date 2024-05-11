@@ -14,7 +14,7 @@ Construcción y búsqueda en M-Tree usando métodos de Ciaccia-Patella (CP) y Se
 ## 💻 Ejecución y entregables
 En el siguiente repositorio se entregan los siguientes archivos. Todas las implementaciones fueron realizadas en C++:
 
-- 📁 $\texttt{/input/}$ - Contiene las entradas compartidas en formato $\texttt{.txt}$ desde $2^{10}$ a $2^{15}$ datos para la ejecución de CP y SS.
+- 📁 $\texttt{/input/}$ - Contiene las entradas compartidas en formato $\texttt{.txt}$ desde $2^{10}$ a $2^{15}$ datos para la ejecución de CP y SS, además del archivo $\texttt{queries.txt}$ de los puntos de búsqueda.
 - 📄 $\texttt{sexton-swinbank.cpp}$ - Método de construcción Sexton-Swinbank.
 - 📄 $\texttt{ciaccia-patella.cpp}$ -  Método de construcción Ciaccia-Patella.
 - 📄 $\texttt{search.cpp}$ - Método de búsqueda generalizado para ambos métodos de construcción.
