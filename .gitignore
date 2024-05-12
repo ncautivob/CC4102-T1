@@ -4,3 +4,8 @@
 
 .vscode/* 
 **/.history
+
+# Ignore large files
+input/pow223.txt
+input/pow224.txt
+input/pow225.txt
