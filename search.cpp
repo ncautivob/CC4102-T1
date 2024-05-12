@@ -1,11 +1,13 @@
-/**
-Search Method
+/** TAREA 1, DISEÑO Y ANÁLISIS DE ALGORITMOS
  * Valentina Alarcón
  * Naomi Cautivo
  * Máximo Flores
+ * 
+ * Método: Ciaccia Patella
 */
 
-#include <algorithm>  //shuffle
+/** En primer lugar, se incluyen todas las librerías necesarias para la implementación */
+#include <algorithm>
 #include <chrono>
 #include <cmath>
 #include <cstddef>
