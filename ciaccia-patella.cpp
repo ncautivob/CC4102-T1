@@ -21,26 +21,40 @@
 #include <vector>
 #include <fstream>
 
-using namespace std;
+using namespace std; // Se setea esto para no tener que escribir 'std::' repetitivamente.
 using namespace std::chrono;
-using Point = pair<double, double>;
+using Point = pair<double, double>; // Esto es para simplificar la notación.
 using Points = set<Point>;
 
+
+/** Por enunciado se mencionan algunas características de los nodos.
+ * En primer lugar, cada nodo tendrá como capacidad B entradas en disco
+ * Luego, un nodo acepta hasta B / sizeof(entry) entradas.
+ * Para la etapa de experimentación se definirá B = 4096 Bytes.
+ * Para este último también se definirá N_ITER como 100 (n de búsquedas a realizar)
+ * Y query_radius como 0.02
+*/
 int B_bytes = 4096;
-struct Nodo;
 #define N_ITER 100
 #define query_radius 0.02
 
-typedef struct Entry {  // una entrada de un nodo
-  pair<double, double> p;
-  double cr;
-  Nodo* a;
+struct Nodo;
+
+/** Definimos la estructura 'Entry' como una de las entradas de un nodo
+ * p: un punto
+ * cr: radio cobertor (covering radius) de este subárbol.
+ * Esto es la máxima distancia que hay entre p y cualquier punto del subárbol relacionado a su entrada.
+ * 
+*/
+typedef struct Entry {
+    Point p;
+    double cr;
+    Nodo* a;
 } Entry;
 
 int B = B_bytes / sizeof(Entry);  // (128)
 int b_min = 0.5 * B;             // capacidad mínima (64)
 
-/** T1-CCP */
 /** Establecer semilla para selección aleatoria posterior */
 unsigned seed = chrono::system_clock::now().time_since_epoch().count();
 default_random_engine e(seed);
@@ -75,7 +89,6 @@ void deleteTree(Nodo *nodo) {
             entrada.a = nullptr;
         }
     }
-
     // Finalmente se elimina el nodo raíz
     delete nodo;
 }
@@ -159,7 +172,6 @@ double setear_radio_cobertor(Entry& entry){ // No seteará las hojas porque orig
     }
     entry.cr = max_radio;
 
-
     return entry.cr;
 }
 
@@ -203,7 +215,6 @@ void conectar_arboles(Nodo* nodo, map<Point,Nodo*>& subarboles){
 
 Nodo *crear_MTree_CCP(const set<Point> points){
     int n = points.size();
-    //cout << "n es" << n << endl;
     if(n <= B){ // Entran todos los puntos en un nodo!
         Nodo *T = new Nodo; // Se crea un árbol T (un nodo raíz con vector entries vacío)
         for (Point punto: points){
@@ -219,7 +230,6 @@ Nodo *crear_MTree_CCP(const set<Point> points){
     }
     else{
         int k = int(ceil(min(double(B), double(n)/B))); // Debe ser el techo, tal que no llegue a 1!
-        //cout << "k es" << k << endl;
         map<Point, set<Point>> samples;
         do{
             samples = map<Point, set<Point>>();
@@ -253,7 +263,6 @@ Nodo *crear_MTree_CCP(const set<Point> points){
             auto it = samples.begin();
             while (it != samples.end()) {
                 set<Point>& conjunto = it->second;
-                //cout << "el conjunto mide " << conjunto.size() << endl;
                 if (conjunto.size() < b_min) {
                     set<pair<double, double>> conjunto_copia = conjunto; // Hacer una copia
                     it = samples.erase(it); // Quitamos pfj de F
@@ -287,20 +296,14 @@ Nodo *crear_MTree_CCP(const set<Point> points){
                 for(auto entrada = entradas.begin(); entrada != entradas.end(); entrada++){
                     Nodo *sub_subarbol = entrada->a;
                     subarboles[entrada->p] = sub_subarbol;
-                    //cout << "la altura de este subarbol es" << sub_subarbol->altura << endl;
                     if(sub_subarbol->altura < h){
                         h = sub_subarbol->altura;
                     }
                     entrada->a = nullptr;
                 }
-                // for(auto& entrada : entradas) {
-                //     entrada.a = nullptr;
-                // }
-                // // Eliminar el nodo raíz
                 delete sub_arbol;
             }
         }
-        //cout << "la altura minima encontrada fue " << h << endl;
         
         set<Point> claves_a_eliminar; // Set de las claves que se eliminarán del mapa 'subarboles' posteriormente
         set<Point> keys; // Las llaves del mapa 'subarboles' (el conjunto F del enunciado)
@@ -320,7 +323,6 @@ Nodo *crear_MTree_CCP(const set<Point> points){
                 // 9.2 Se hace una búsqueda exhaustiva en Tj de todos los subárboles de altura igual a h.
                 // Se insertan estos árboles a T′
                 busqueda_h(T_j, h, arboles_alt_h); // Se insertan los puntos raíces linkeados con sus subárboles en el mapa 'arboles_alt_h'
-                //cout << "termina busqueda" << endl;
             }
         }
 
@@ -347,26 +349,27 @@ Nodo *crear_MTree_CCP(const set<Point> points){
     }
 }
 
-set<Point> crear_set(int n){
-    set<Point> ccp_set;
-    for(int j=0; j<n; j++){
+/** Función para crear sets de puntos aleatorios */
+Points createSet(int n) {
+    Points result;
+
+    while (n--) {
         random_device rd;
         mt19937 gen(rd());
         uniform_real_distribution<double> dis(0.0, 1.0);
 
-        // Generate random double values
         double first = dis(gen);
         double second = dis(gen);
 
-        // Create and return the pair
-        ccp_set.insert(make_pair(first, second));
+        result.insert({first, second});
     }
-    return ccp_set;
+
+    return result;
 }
 
 
 /** search method */
-void search(Nodo* MTree, Point q, double r, vector<int>& v, int index) {
+void search_CCP(Nodo* MTree, Point q, double r, vector<int>& v, int index) {
   if (MTree == nullptr) return; // Si no hay MTree, rip
 
   // El objetivo es encontrar todos los puntos de T que residen dentro de la bola (q,r)
@@ -380,6 +383,7 @@ void search(Nodo* MTree, Point q, double r, vector<int>& v, int index) {
         for (Entry entrada : entradas) {
         Point punto = entrada.p;
         if (distancia_cuadrado(punto, q) <= r_square) {
+            // no es muy necesario guardar los outputs para el testing
             //resp.insert(punto);
         }
     }
@@ -391,7 +395,7 @@ void search(Nodo* MTree, Point q, double r, vector<int>& v, int index) {
         double cr_square = pow(cr, 2);
         if (distancia_cuadrado(punto, q) <= r_square + cr_square) {
             // se busca en su hijo a posibles respuestas
-            search(entrada.a, q, r, v, index);
+            search_CCP(entrada.a, q, r, v, index);
         }
         // si no, se descarta
         }
@@ -434,13 +438,14 @@ Points parsePoints(int n) {
 }
 
 int main() {
-    ofstream outputFile("resultados.txt");
+    ofstream outputFile("resultados-cp.txt");
 
     /** Queremos redireccionar las salidas de stdout al archivo txt */
     streambuf* originalStdout = cout.rdbuf(outputFile.rdbuf());
 
     for(int i = 10; i < 26; i++){
         cout << "probando con i=" << i << endl;
+        // The argument is the power of 2, or N_ITER if query.
         Points testSet = parsePoints(i);
         Points testQueries = parsePoints(N_ITER);
 
@@ -463,7 +468,7 @@ int main() {
             Point q = queryPoints[i];
 
             auto start = high_resolution_clock::now();
-            search(root, q, query_radius, accesses, i);
+            search_CCP(root, q, query_radius, accesses, i);
             auto stop = high_resolution_clock::now();
 
             auto duration = duration_cast<nanoseconds>(stop - start);

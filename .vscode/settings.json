@@ -13,6 +13,9 @@
     "chrono": "cpp",
     "cmath": "cpp",
     "ostream": "cpp",
-    "new": "cpp"
+    "new": "cpp",
+    "iosfwd": "cpp",
+    "fstream": "cpp",
+    "iostream": "cpp"
   }
 }

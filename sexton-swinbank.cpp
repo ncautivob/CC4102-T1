@@ -523,6 +523,25 @@ void freeMem(Node* root, Entry parent) {
   }
 }
 
+void deleteTree(Node *nodo) {
+    if (nodo == nullptr) // Si el nodo es un puntero nulo, lo ignoramos
+        return;
+    vector<Entry> entradas = nodo->entries;
+    if(entradas[0].children==nullptr){ // Si las entradas del nodo son punteros nulos, lo ignoramos
+        delete nodo;
+        return;
+    }
+    else{
+        for(Entry entrada : entradas){ // Si no, detonamos la función recursivamente para el hijo
+            deleteTree(entrada.children);
+            entrada.children = nullptr;
+        }
+    }
+
+    // Finalmente se elimina el nodo raíz
+    delete nodo;
+}
+
 /** The vector v has the accesses. */
 void search(Node* root, Point q, double r, vector<int>& v, int index) {
   Entries entries = root->entries;
@@ -595,43 +614,68 @@ Points parsePoints(int n) {
 }
 
 int main() {
-  // The argument is the power of 2, or N_ITER if query.
-  Points testSet = parsePoints(10);
-  Points testQueries = parsePoints(N_ITER);
+  ofstream outputFile("resultados-ss.txt");
+  streambuf* originalStdout = cout.rdbuf(outputFile.rdbuf());
 
-  vector<Point> queryPoints;
-  vector<pair<int, double>> response;
-  vector<int> accesses(N_ITER);
+  /** No recomendamos probar esta función con i mayores a 15... */
+  for(int i = 10; i < 16; i++){
+    cout << "probando con i=" << i << endl;
+    // The argument is the power of 2, or N_ITER if query.
+    Points testSet = parsePoints(i);
+    Points testQueries = parsePoints(N_ITER);
 
-  for (Point point : testQueries) {
-    queryPoints.push_back(point);
-  }
+    vector<Point> queryPoints;
+    vector<pair<int, double>> response;
+    vector<int> accesses(N_ITER);
 
-  auto start = high_resolution_clock::now();
-  Node* root = SSAlgorithm(testSet);
-  auto stop = high_resolution_clock::now();
-  auto duration = duration_cast<seconds>(stop - start);
-
-  cout << "Construcción M-Tree (SS): " << duration.count() << " s\n";
-
-  //  Frees the memory used in the M-Tree.
-  // freeMem(root, {{NULL, NULL}, NULL, nullptr});
-
-  for (int i = 0; i < N_ITER; i++) {
-    Point q = queryPoints[i];
+    for (Point point : testQueries) {
+      queryPoints.push_back(point);
+    }
 
     auto start = high_resolution_clock::now();
-    search(root, q, query_radius, accesses, i);
+    Node* root = SSAlgorithm(testSet);
     auto stop = high_resolution_clock::now();
-
     auto duration = duration_cast<nanoseconds>(stop - start);
-    response.push_back({accesses[i], duration.count()});
+
+    cout << "Construcción M-Tree (SS): " << duration.count() << " ns\n";
+
+    //  Frees the memory used in the M-Tree.
+    // freeMem(root, {{NULL, NULL}, NULL, nullptr});
+
+    for (int i = 0; i < N_ITER; i++) {
+      Point q = queryPoints[i];
+
+      auto start = high_resolution_clock::now();
+      search(root, q, query_radius, accesses, i);
+      auto stop = high_resolution_clock::now();
+
+      auto duration = duration_cast<nanoseconds>(stop - start);
+      response.push_back({accesses[i], duration.count()});
+    }
+    double suma = 0.0;
+    for (int i = 0; i < N_ITER; i++) {
+      cout << i + 1 << " (accesos, tiempo): (" << response[i].first << ", "
+          << response[i].second << " ns)\n";
+      suma += response[i].first;
+    }
+    cout << "La media de accesos es " <<  suma/100 << endl;
+    double sum2 = 0.0;
+
+    for (int i = 0; i < N_ITER; i++) {
+        sum2 += (response[i].first - (suma/100)) * (response[i].first - (suma/100));
+    }
+
+    double varianza = (double)sum2 / 100;
+
+    double standardDeviation = sqrt(varianza);
+    cout << "la desviacion estandar es " << standardDeviation << endl;
+    cout << "y la varianza es" << varianza << endl;
+    deleteTree(root);
   }
 
-  for (int i = 0; i < N_ITER; i++) {
-    cout << i + 1 << " (accesos, tiempo): (" << response[i].first << ", "
-         << response[i].second << " ns)\n";
-  }
+  /** Volvemos la salida estándar al original */
+  cout.rdbuf(originalStdout);
 
+  outputFile.close();
   return 0;
 }
