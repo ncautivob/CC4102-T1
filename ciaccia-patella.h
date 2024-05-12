@@ -7,40 +7,47 @@
 */
 
 /** En primer lugar, se incluyen todas las librerías necesarias para la implementación */
-#include <algorithm>
-#include <chrono>
-#include <cmath>
 #include <cstddef>
-#include <cstdlib>
 #include <iostream>
+#include <set>
+#include <vector>
+#include <algorithm>
+#include <cstdlib>
 #include <limits>
+#include <cmath>
+#include <utility>
 #include <map>
 #include <random>
-#include <set>
-#include <utility>
-#include <vector>
-#include <fstream>
+#include <chrono>
 
-using namespace std;
-using namespace std::chrono;
-using Point = pair<double, double>;
-using Points = set<Point>;
+using namespace std; // Se setea esto para no tener que escribir 'std::' repetitivamente.
+using Point = pair<double, double>; // Esto es para simplificar la notación.
+struct Nodo; // Y esto es para poder utilizarlo en las estructuras a definir.
 
-int B_bytes = 4096;
-struct Nodo;
-#define N_ITER 100
-#define query_radius 0.02
+/** Por enunciado se mencionan algunas características de los nodos.
+ * En primer lugar, cada nodo tendrá como capacidad B entradas en disco
+ * Luego, un nodo acepta hasta B / sizeof(entry) entradas.
+ * Para la etapa de experimentación se definirá B = 4096 Bytes.
+ * 
+*/
 
-typedef struct Entry {  // una entrada de un nodo
-  pair<double, double> p;
-  double cr;
-  Nodo* a;
+int B_bytes = 4096; // Esto dividido en sizeof(entry) equivale al máximo número de entradas de un nodo.
+
+/** Definimos la estructura 'Entry' como una de las entradas de un nodo
+ * p: un punto
+ * cr: radio cobertor (covering radius) de este subárbol.
+ * Esto es la máxima distancia que hay entre p y cualquier punto del subárbol relacionado a su entrada.
+ * 
+*/
+typedef struct Entry {
+    Point p;
+    double cr;
+    Nodo *a;
 } Entry;
 
-int B = B_bytes / sizeof(Entry);  // (128)
-int b_min = 0.5 * B;             // capacidad mínima (64)
+int B = B_bytes / sizeof(Entry); // (128)
+int b_min = 0.5 * B; // Capacidad mínima (64)
 
-/** T1-CCP */
 /** Establecer semilla para selección aleatoria posterior */
 unsigned seed = chrono::system_clock::now().time_since_epoch().count();
 default_random_engine e(seed);
@@ -364,135 +371,13 @@ set<Point> crear_set(int n){
     return ccp_set;
 }
 
-
-/** search method */
-void search_CCP(Nodo* MTree, Point q, double r, vector<int>& v, int index) {
-  if (MTree == nullptr) return; // Si no hay MTree, rip
-
-  // El objetivo es encontrar todos los puntos de T que residen dentro de la bola (q,r)
-
-    vector<Entry> entradas = MTree->entries;
-  double r_square = pow(r,2);  // dado que la función de distancia entrega la distancia al cuadrado
-
-  if (entradas[0].a == nullptr) {  // nodo es una hoja
-    v[index]++; // Se aumenta en uno los accesos
-    // se verifica para cada entrada si p cumple con dist(p, q) ≤ r
-        for (Entry entrada : entradas) {
-        Point punto = entrada.p;
-        if (distancia_cuadrado(punto, q) <= r_square) {
-            //resp.insert(punto);
-        }
-    }
-  } else {  // nodo es interno
-    v[index]++;
-    for (Entry entrada : entradas) {
-        Point punto = entrada.p;
-        double cr = entrada.cr;
-        double cr_square = pow(cr, 2);
-        if (distancia_cuadrado(punto, q) <= r_square + cr_square) {
-            // se busca en su hijo a posibles respuestas
-            search_CCP(entrada.a, q, r, v, index);
-        }
-        // si no, se descarta
-        }
-    }
-}
-
-Points parsePoints(int n) {
-    string line;
-
-    string fileName =
-        n == N_ITER ? "queries.txt" : "pow2" + to_string(n) + ".txt";
-    ifstream File("./input/" + fileName);
-
-    Points result;
-    if (File.is_open()) {
-        while (getline(File, line)) {
-        // Resets the index. The format is (x, y).
-        int i = 0;
-        string x, y;
-
-        while (line[i] != '(') i++;
-        i++;
-        while (line[i] != ',') {
-            x += line[i];
-            i++;
-        }
-
-        i += 2;
-        while (line[i] != ')') {
-            y += line[i];
-            i++;
-        }
-
-        result.insert({stod(x), stod(y)});
-        }
-        File.close();
-    }
-
-    return result;
-}
-
 int main() {
-    ofstream outputFile("resultados.txt");
-
-    /** Queremos redireccionar las salidas de stdout al archivo txt */
-    streambuf* originalStdout = cout.rdbuf(outputFile.rdbuf());
-
-    for(int i = 10; i < 26; i++){
-        cout << "probando con i=" << i << endl;
-        Points testSet = parsePoints(i);
-        Points testQueries = parsePoints(N_ITER);
-
-        vector<Point> queryPoints;
-        vector<pair<int, double>> response;
-        vector<int> accesses(N_ITER);
-
-        for (Point point : testQueries) {
-            queryPoints.push_back(point);
-        }
-
-        auto start = high_resolution_clock::now();
-        Nodo* root = crear_MTree_CCP(testSet);
-        auto stop = high_resolution_clock::now();
-        auto duration = duration_cast<nanoseconds>(stop - start);
-
-        cout << "Construcción M-Tree (CCP): " << duration.count() << " ns\n";
-
-        for (int i = 0; i < N_ITER; i++) {
-            Point q = queryPoints[i];
-
-            auto start = high_resolution_clock::now();
-            search_CCP(root, q, query_radius, accesses, i);
-            auto stop = high_resolution_clock::now();
-
-            auto duration = duration_cast<nanoseconds>(stop - start);
-            response.push_back({accesses[i], duration.count()});
-        }
-        double suma = 0.0;
-        for (int i = 0; i < N_ITER; i++) {
-            cout << i + 1 << " (accesos, tiempo): (" << response[i].first << ", "
-                << response[i].second << " ns)\n";
-            suma += response[i].first;
-        }
-        cout << "La media de accesos es " <<  suma/100 << endl;
-        double sum2 = 0.0;
-
-        for (int i = 0; i < N_ITER; i++) {
-            sum2 += (response[i].first - (suma/100)) * (response[i].first - (suma/100));
-        }
-
-        double varianza = (double)sum2 / 100;
-
-        double standardDeviation = sqrt(varianza);
-        cout << "la desviacion estandar es " << standardDeviation << endl;
-        cout << "y la varianza es" << varianza << endl;
-        deleteTree(root);
+    set<pair<double, double>> random_pairs = crear_set(pow(2,22));
+    cout << random_pairs.size() << endl;
+    Nodo *arbol = crear_MTree_CCP(random_pairs);
+    for(Entry entry : arbol->entries){
+        cout << "entry: " << entry.p.first << " " << entry.p.second << endl;
     }
-
-    /** Volvemos la salida estándar al original */
-    cout.rdbuf(originalStdout);
-
-    outputFile.close();
+    deleteTree(arbol);
     return 0;
 }

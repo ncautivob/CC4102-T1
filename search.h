@@ -366,7 +366,7 @@ set<Point> crear_set(int n){
 
 
 /** search method */
-void search_CCP(Nodo* MTree, Point q, double r, vector<int>& v, int index) {
+void search(Nodo* MTree, Point q, double r, vector<int>& v, int index) {
   if (MTree == nullptr) return; // Si no hay MTree, rip
 
   // El objetivo es encontrar todos los puntos de T que residen dentro de la bola (q,r)
@@ -391,7 +391,7 @@ void search_CCP(Nodo* MTree, Point q, double r, vector<int>& v, int index) {
         double cr_square = pow(cr, 2);
         if (distancia_cuadrado(punto, q) <= r_square + cr_square) {
             // se busca en su hijo a posibles respuestas
-            search_CCP(entrada.a, q, r, v, index);
+            search(entrada.a, q, r, v, index);
         }
         // si no, se descarta
         }
@@ -463,7 +463,7 @@ int main() {
             Point q = queryPoints[i];
 
             auto start = high_resolution_clock::now();
-            search_CCP(root, q, query_radius, accesses, i);
+            search(root, q, query_radius, accesses, i);
             auto stop = high_resolution_clock::now();
 
             auto duration = duration_cast<nanoseconds>(stop - start);
