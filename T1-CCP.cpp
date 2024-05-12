@@ -373,12 +373,11 @@ set<Point> crear_set(int n){
 
 int main() {
     set<pair<double, double>> random_pairs = crear_set(pow(2,22));
-    //cout << "B es " << B << endl;
+    cout << random_pairs.size() << endl;
     Nodo *arbol = crear_MTree_CCP(random_pairs);
     for(Entry entry : arbol->entries){
         cout << "entry: " << entry.p.first << " " << entry.p.second << endl;
     }
-    cout << "y tiene " << arbol->entries.size() << "entradas" << endl;
     deleteTree(arbol);
     return 0;
 }

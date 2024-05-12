@@ -17,10 +17,12 @@ Search Method
 #include <set>
 #include <utility>
 #include <vector>
+#include <fstream>
 
 using namespace std;
 using namespace std::chrono;
 using Point = pair<double, double>;
+using Points = set<Point>;
 
 int B_bytes = 4096;
 struct Nodo;
@@ -62,11 +64,13 @@ void deleteTree(Nodo *nodo) {
         return;
     vector<Entry> entradas = nodo->entries;
     if(entradas[0].a==nullptr){ // Si las entradas del nodo son punteros nulos, lo ignoramos
+        delete nodo;
         return;
     }
     else{
         for(Entry entrada : entradas){ // Si no, detonamos la función recursivamente para el hijo
             deleteTree(entrada.a);
+            entrada.a = nullptr;
         }
     }
 
@@ -128,6 +132,10 @@ void busqueda_h(Nodo *nodo, const int h, map<Point, Nodo*>& arboles) {
             busqueda_h(hijo, h, arboles);
         }
     }
+    for(auto& entrada : entradas) {
+        entrada.a = nullptr;
+    }
+    delete nodo;
 }
 
 /** Función que seta el radio cobertor de una entrada */
@@ -148,7 +156,7 @@ double setear_radio_cobertor(Entry& entry){ // No seteará las hojas porque orig
         }
     }
     entry.cr = max_radio;
-    //cout << "radio seteado " << entry.cr << endl;
+
 
     return entry.cr;
 }
@@ -172,10 +180,6 @@ void conectar_arboles(Nodo* nodo, map<Point,Nodo*>& subarboles){
             Point punto_hoja = entries[j].p;
             entries[j].a = subarboles[punto_hoja];
             setear_radio_cobertor(entries[j]);
-
-            //cout << "el radio seteado fue" << entries[j].cr << endl;
-            //radio_2(entries[j], entries[j].p);
-            //cout << "el 2do radio seteado fue" << entries[j].cr2 << endl;
         }
     }
     else { // Si el nodo no es una hoja, recorre recursivamente sus entradas
@@ -186,10 +190,6 @@ void conectar_arboles(Nodo* nodo, map<Point,Nodo*>& subarboles){
                 altura_max = altura;
             }
             setear_radio_cobertor(entry);
-
-            //cout << "el radio seteado fue" << entry.cr << endl;
-            //radio_2(entry, entry.p);
-            //cout << "el 2do radio seteado fue" << entry.cr2 << endl;
         }
         nodo->altura = altura_max; // Se setea la altura para el nodo
     }
@@ -272,7 +272,7 @@ Nodo *crear_MTree_CCP(const set<Point> points){
         // Y de paso, se determinará la altura mínima de los subárboles (h).
         for(const auto& par : samples){
             Nodo *sub_arbol = crear_MTree_CCP(par.second);
-            vector<Entry> entradas = sub_arbol->entries;
+            vector<Entry>& entradas = sub_arbol->entries;
 
             if(entradas.size() >= b_min){ // Si el nodo tiene más de b_min entradas, todo ok
                 subarboles[par.first] = sub_arbol;
@@ -281,7 +281,7 @@ Nodo *crear_MTree_CCP(const set<Point> points){
                 }
             }
             else{
-                //cout << "rip, proceso sgte" << endl;
+                /** Tomaremos los subárboles del nodo */
                 for(auto entrada = entradas.begin(); entrada != entradas.end(); entrada++){
                     Nodo *sub_subarbol = entrada->a;
                     subarboles[entrada->p] = sub_subarbol;
@@ -289,8 +289,13 @@ Nodo *crear_MTree_CCP(const set<Point> points){
                     if(sub_subarbol->altura < h){
                         h = sub_subarbol->altura;
                     }
+                    entrada->a = nullptr;
                 }
-                
+                // for(auto& entrada : entradas) {
+                //     entrada.a = nullptr;
+                // }
+                // // Eliminar el nodo raíz
+                delete sub_arbol;
             }
         }
         //cout << "la altura minima encontrada fue " << h << endl;
@@ -364,65 +369,128 @@ void search(Nodo* MTree, Point q, double r, vector<int>& v, int index) {
 
   // El objetivo es encontrar todos los puntos de T que residen dentro de la bola (q,r)
 
-  vector<Entry> entradas = MTree->entries;
+    vector<Entry> entradas = MTree->entries;
   double r_square = pow(r,2);  // dado que la función de distancia entrega la distancia al cuadrado
 
   if (entradas[0].a == nullptr) {  // nodo es una hoja
     v[index]++; // Se aumenta en uno los accesos
     // se verifica para cada entrada si p cumple con dist(p, q) ≤ r
-    for (Entry entrada : entradas) {
-      Point punto = entrada.p;
-      if (distancia_cuadrado(punto, q) <= r_square) {
-        //resp.insert(punto);
-      }
+        for (Entry entrada : entradas) {
+        Point punto = entrada.p;
+        if (distancia_cuadrado(punto, q) <= r_square) {
+            //resp.insert(punto);
+        }
     }
   } else {  // nodo es interno
     v[index]++;
     for (Entry entrada : entradas) {
-      Point punto = entrada.p;
-      double cr = entrada.cr;
-      double cr_square = pow(cr, 2);
-      if (distancia_cuadrado(punto, q) <= r_square + cr_square) {
-        // se busca en su hijo a posibles respuestas
-        search(entrada.a, q, r, v, index);
-      }
-      // si no, se descarta
+        Point punto = entrada.p;
+        double cr = entrada.cr;
+        double cr_square = pow(cr, 2);
+        if (distancia_cuadrado(punto, q) <= r_square + cr_square) {
+            // se busca en su hijo a posibles respuestas
+            search(entrada.a, q, r, v, index);
+        }
+        // si no, se descarta
+        }
     }
-  }
+}
+
+Points parsePoints(int n) {
+    string line;
+
+    string fileName =
+        n == N_ITER ? "queries.txt" : "pow2" + to_string(n) + ".txt";
+    ifstream File("./input/" + fileName);
+
+    Points result;
+    if (File.is_open()) {
+        while (getline(File, line)) {
+        // Resets the index. The format is (x, y).
+        int i = 0;
+        string x, y;
+
+        while (line[i] != '(') i++;
+        i++;
+        while (line[i] != ',') {
+            x += line[i];
+            i++;
+        }
+
+        i += 2;
+        while (line[i] != ')') {
+            y += line[i];
+            i++;
+        }
+
+        result.insert({stod(x), stod(y)});
+        }
+        File.close();
+    }
+
+    return result;
 }
 
 int main() {
-    /** Creamos el árbol*/
-    set<Point> random_pairs = crear_set(pow(2,10));
-    set<Point> test_queries = crear_set(N_ITER); // los puntos 'q'.
+    ofstream outputFile("resultados.txt");
 
-    vector<Point> queryPoints;
-    vector<pair<int, double>> response;
-    vector<int> accesses(N_ITER);
-    /** Ahora, debemos crear los puntos r */
-    for (Point point : test_queries) {
-      queryPoints.push_back(point);
+    /** Queremos redireccionar las salidas de stdout al archivo txt */
+    streambuf* originalStdout = cout.rdbuf(outputFile.rdbuf());
+
+    for(int i = 10; i < 26; i++){
+        cout << "probando con i=" << i << endl;
+        Points testSet = parsePoints(i);
+        Points testQueries = parsePoints(N_ITER);
+
+        vector<Point> queryPoints;
+        vector<pair<int, double>> response;
+        vector<int> accesses(N_ITER);
+
+        for (Point point : testQueries) {
+            queryPoints.push_back(point);
+        }
+
+        auto start = high_resolution_clock::now();
+        Nodo* root = crear_MTree_CCP(testSet);
+        auto stop = high_resolution_clock::now();
+        auto duration = duration_cast<nanoseconds>(stop - start);
+
+        cout << "Construcción M-Tree (CCP): " << duration.count() << " ns\n";
+
+        for (int i = 0; i < N_ITER; i++) {
+            Point q = queryPoints[i];
+
+            auto start = high_resolution_clock::now();
+            search(root, q, query_radius, accesses, i);
+            auto stop = high_resolution_clock::now();
+
+            auto duration = duration_cast<nanoseconds>(stop - start);
+            response.push_back({accesses[i], duration.count()});
+        }
+        double suma = 0.0;
+        for (int i = 0; i < N_ITER; i++) {
+            cout << i + 1 << " (accesos, tiempo): (" << response[i].first << ", "
+                << response[i].second << " ns)\n";
+            suma += response[i].first;
+        }
+        cout << "La media de accesos es " <<  suma/100 << endl;
+        double sum2 = 0.0;
+
+        for (int i = 0; i < N_ITER; i++) {
+            sum2 += (response[i].first - (suma/100)) * (response[i].first - (suma/100));
+        }
+
+        double varianza = (double)sum2 / 100;
+
+        double standardDeviation = sqrt(varianza);
+        cout << "la desviacion estandar es " << standardDeviation << endl;
+        cout << "y la varianza es" << varianza << endl;
+        deleteTree(root);
     }
 
-    //cout << "B es " << B << endl;
-    Nodo *arbol = crear_MTree_CCP(random_pairs);
+    /** Volvemos la salida estándar al original */
+    cout.rdbuf(originalStdout);
 
-    for (int i = 0; i < N_ITER; i++) {
-      Point q = queryPoints[i];
-
-      auto start = high_resolution_clock::now();
-      search(arbol, q, query_radius, accesses, i);
-      auto stop = high_resolution_clock::now();
-
-      auto duration = duration_cast<nanoseconds>(stop - start);
-      response.push_back({accesses[i], duration.count()});
-    }
-
-    for (int i = 0; i < N_ITER; i++) {
-      cout << i + 1 << " (accesos, tiempo): (" << response[i].first << ", "
-          << response[i].second << " ns)\n";
-    }
-
-    deleteTree(arbol);
+    outputFile.close();
     return 0;
 }
